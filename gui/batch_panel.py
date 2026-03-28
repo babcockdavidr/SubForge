@@ -143,7 +143,7 @@ class BatchPanel(QWidget):
         folder_row = QHBoxLayout()
 
         self._lbl_folder = QLabel("No folder selected")
-        self._lbl_folder.setStyleSheet(f"color: {FG2}; font-size: 12px;")
+        self._lbl_folder.setStyleSheet(f"color: {FG2}; font-size: 10pt;")
         self._lbl_folder.setSizePolicy(QSizePolicy.Policy.Expanding,
                                        QSizePolicy.Policy.Preferred)
 
@@ -168,7 +168,7 @@ class BatchPanel(QWidget):
         thresh_layout.setContentsMargins(12, 8, 12, 8)
 
         thresh_title = QLabel("Sensitivity:")
-        thresh_title.setStyleSheet(f"color: {FG}; font-size: 12px; font-weight: bold;")
+        thresh_title.setStyleSheet(f"color: {FG}; font-size: 10pt; font-weight: bold;")
 
         self._slider = QSlider(Qt.Orientation.Horizontal)
         self._slider.setMinimum(1)
@@ -179,13 +179,13 @@ class BatchPanel(QWidget):
         self._slider.setFixedWidth(200)
 
         self._lbl_threshold = QLabel(THRESHOLD_LABELS[3])
-        self._lbl_threshold.setStyleSheet(f"color: {YELLOW}; font-size: 11px;")
+        self._lbl_threshold.setStyleSheet(f"color: {YELLOW}; font-size: 9pt;")
 
         # Endpoint labels
         lbl_aggressive = QLabel("More aggressive")
-        lbl_aggressive.setStyleSheet(f"color: {RED}; font-size: 10px;")
+        lbl_aggressive.setStyleSheet(f"color: {RED}; font-size: 8pt;")
         lbl_conservative = QLabel("More conservative")
-        lbl_conservative.setStyleSheet(f"color: {GREEN}; font-size: 10px;")
+        lbl_conservative.setStyleSheet(f"color: {GREEN}; font-size: 8pt;")
 
         thresh_layout.addWidget(thresh_title)
         thresh_layout.addWidget(lbl_aggressive)
@@ -198,7 +198,7 @@ class BatchPanel(QWidget):
         action_row = QHBoxLayout()
 
         self._chk_warnings = QCheckBox("Also remove warnings (one level below threshold)")
-        self._chk_warnings.setStyleSheet(f"color: {FG2}; font-size: 12px;")
+        self._chk_warnings.setStyleSheet(f"color: {FG2}; font-size: 10pt;")
 
         self._btn_scan = QPushButton("⚡  Scan All")
         self._btn_scan.setObjectName("btn_clean_all")

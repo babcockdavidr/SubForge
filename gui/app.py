@@ -34,7 +34,7 @@ QMainWindow, QWidget {{
     background: {BG};
     color: {FG};
     font-family: 'Consolas', 'Cascadia Code', 'JetBrains Mono', monospace;
-    font-size: 13px;
+    font-size: 10pt;
 }}
 
 /* ── Toolbar ── */
@@ -45,7 +45,7 @@ QToolBar {{
     padding: 4px 8px;
 }}
 QToolBar QLabel {{
-    font-size: 16px;
+    font-size: 12pt;
     font-weight: bold;
     color: {ACCENT};
     letter-spacing: 2px;
@@ -59,7 +59,7 @@ QPushButton {{
     border: 1px solid {BORDER};
     border-radius: 4px;
     padding: 5px 14px;
-    font-size: 12px;
+    font-size: 10pt;
 }}
 QPushButton:hover  {{ background: {ACCENT}22; border-color: {ACCENT}; }}
 QPushButton:pressed {{ background: {ACCENT}44; }}
@@ -118,14 +118,14 @@ QTextEdit {{
 /* ── Labels ── */
 QLabel#section_label {{
     color: {FG2};
-    font-size: 10px;
+    font-size: 8pt;
     letter-spacing: 1.5px;
     text-transform: uppercase;
     padding: 4px 0 2px 0;
 }}
 QLabel#file_status {{
     color: {FG2};
-    font-size: 12px;
+    font-size: 10pt;
     padding: 2px 4px;
 }}
 
@@ -154,14 +154,14 @@ QStatusBar {{
     background: {BG2};
     border-top: 1px solid {BORDER};
     color: {FG2};
-    font-size: 11px;
+    font-size: 9pt;
     padding: 2px 8px;
 }}
 
 /* ── Checkbox ── */
 QCheckBox {{
     color: {FG2};
-    font-size: 12px;
+    font-size: 10pt;
     spacing: 6px;
 }}
 QCheckBox::indicator {{
@@ -187,7 +187,7 @@ QTabBar::tab {{
     border: 1px solid {BORDER};
     border-bottom: none;
     padding: 5px 14px;
-    font-size: 12px;
+    font-size: 10pt;
 }}
 QTabBar::tab:selected {{
     background: {BG3};
@@ -200,7 +200,7 @@ QGroupBox {{
     border: 1px solid {BORDER};
     border-radius: 4px;
     margin-top: 8px;
-    font-size: 11px;
+    font-size: 9pt;
     color: {FG2};
     padding-top: 6px;
 }}
@@ -310,11 +310,11 @@ class DropZone(QFrame):
 
         icon = QLabel("⬇")
         icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon.setStyleSheet(f"font-size: 28px; color: {FG2};")
+        icon.setStyleSheet(f"font-size: 18pt; color: {FG2};")
 
         msg = QLabel("Drop subtitle files here\n.srt  .ass  .ssa  .vtt")
         msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        msg.setStyleSheet(f"color: {FG2}; font-size: 12px; line-height: 1.8;")
+        msg.setStyleSheet(f"color: {FG2}; font-size: 10pt; line-height: 1.8;")
 
         browse = QPushButton("Browse…")
         browse.setMaximumWidth(100)
@@ -396,7 +396,7 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self._status)
         self._status.showMessage("Ready — drop subtitle files to begin")
         self._version_label = QLabel("Beta 3")
-        self._version_label.setStyleSheet(f"color: {FG2}; font-size: 11px; padding-right: 6px;")
+        self._version_label.setStyleSheet(f"color: {FG2}; font-size: 9pt; padding-right: 6px;")
         self._status.addPermanentWidget(self._version_label)
 
         # Central layout

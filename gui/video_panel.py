@@ -65,11 +65,11 @@ class VideoDropZone(QFrame):
 
         icon = QLabel("🎬")
         icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon.setStyleSheet(f"font-size: 26px;")
+        icon.setStyleSheet(f"font-size: 18pt;")
 
         msg = QLabel("Drop video files here to scan embedded subtitles\n.mkv  .mp4  .m4v  .avi  .mov  .ts")
         msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        msg.setStyleSheet(f"color: {FG2}; font-size: 12px;")
+        msg.setStyleSheet(f"color: {FG2}; font-size: 10pt;")
 
         browse = QPushButton("Browse…")
         browse.setMaximumWidth(100)

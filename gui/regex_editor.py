@@ -241,7 +241,7 @@ class AddPatternDialog(QDialog):
             "All patterns are case-insensitive."
         )
         hint.setWordWrap(True)
-        hint.setStyleSheet(f"color: {FG2}; font-size: 11px;")
+        hint.setStyleSheet(f"color: {FG2}; font-size: 9pt;")
 
         self._regex_input = QLineEdit()
         self._regex_input.setText(self._suggested)
@@ -416,7 +416,7 @@ class RegexEditorPanel(QWidget):
         lbl = QLabel(
             "Edit regex profiles directly. Changes are saved to disk and applied immediately."
         )
-        lbl.setStyleSheet(f"color: {FG2}; font-size: 11px;")
+        lbl.setStyleSheet(f"color: {FG2}; font-size: 9pt;")
         self._btn_new_profile = QPushButton("+ New Profile…")
         self._btn_reload = QPushButton("↺ Reload Engine")
         top.addWidget(lbl, stretch=1)
@@ -485,7 +485,7 @@ class RegexEditorPanel(QWidget):
         # Save / discard row
         save_row = QHBoxLayout()
         self._lbl_dirty = QLabel("")
-        self._lbl_dirty.setStyleSheet(f"color: {ORANGE}; font-size: 11px;")
+        self._lbl_dirty.setStyleSheet(f"color: {ORANGE}; font-size: 9pt;")
         self._btn_save = QPushButton("💾  Save Profile")
         self._btn_save.setObjectName("btn_clean_all")
         self._btn_save.setEnabled(False)
@@ -592,10 +592,10 @@ class RegexEditorPanel(QWidget):
         try:
             reload_engine()
             self._lbl_dirty.setText("✓ Saved and engine reloaded.")
-            self._lbl_dirty.setStyleSheet(f"color: {GREEN}; font-size: 11px;")
+            self._lbl_dirty.setStyleSheet(f"color: {GREEN}; font-size: 9pt;")
         except Exception as e:
             self._lbl_dirty.setText(f"Saved, but reload failed: {e}")
-            self._lbl_dirty.setStyleSheet(f"color: {ORANGE}; font-size: 11px;")
+            self._lbl_dirty.setStyleSheet(f"color: {ORANGE}; font-size: 9pt;")
 
         self.pattern_saved.emit()
 
@@ -699,7 +699,7 @@ class RegexEditorPanel(QWidget):
         try:
             reload_engine()
             self._lbl_dirty.setText("✓ Engine reloaded.")
-            self._lbl_dirty.setStyleSheet(f"color: {GREEN}; font-size: 11px;")
+            self._lbl_dirty.setStyleSheet(f"color: {GREEN}; font-size: 9pt;")
         except Exception as e:
             QMessageBox.critical(self, "Reload failed", str(e))
 
