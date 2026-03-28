@@ -261,6 +261,9 @@ class BatchPanel(QWidget):
         self._report_text = QTextBrowser()
         self._report_text.setFont(QFont("Consolas", 11))
         self._report_text.setOpenExternalLinks(False)
+        self._report_text.setStyleSheet(
+            f"background: {BG2}; color: {FG}; border: 1px solid {BORDER}; border-radius: 4px;"
+        )
 
         rl.addWidget(lbl_report)
         rl.addWidget(self._report_text)
@@ -412,29 +415,29 @@ class BatchPanel(QWidget):
 
         html = [f"""
 <style>
-  body {{ background:#0f1117; color:#cdd6f4; font-family:Consolas,monospace; font-size:12px; margin:8px; }}
-  .section {{ color:#6c7a96; font-size:10px; letter-spacing:2px; margin-top:14px; margin-bottom:4px; }}
-  .stat-row {{ margin:2px 0; }}
+  body {{ background:#161b26; color:#cdd6f4; font-family:Consolas,monospace; font-size:13px; margin:8px; }}
+  .section {{ color:#4e9eff; font-size:11px; letter-spacing:1px; text-transform:uppercase;
+              margin-top:16px; margin-bottom:6px; border-bottom:1px solid #2a3347;
+              padding-bottom:3px; }}
+  .stat-row {{ margin:3px 0; font-size:13px; }}
   .stat-label {{ color:#6c7a96; }}
   .stat-val {{ color:#cdd6f4; font-weight:bold; }}
-  .file-header {{ margin-top:12px; margin-bottom:3px; padding:4px 8px;
-                  background:#1e2535; border-left:3px solid #f38ba8;
-                  color:#cdd6f4; }}
-  .file-clean {{ border-left-color:#a6e3a1; }}
-  .file-warn  {{ border-left-color:#fab387; }}
-  .block-ad   {{ margin:3px 0 3px 16px; padding:4px 8px;
-                 background:#f38ba822; border-left:2px solid #f38ba8; }}
-  .block-warn {{ margin:3px 0 3px 16px; padding:4px 8px;
-                 background:#fab38722; border-left:2px solid #fab387; }}
-  .block-text {{ color:#f38ba8; font-weight:bold; }}
-  .block-text-warn {{ color:#fab387; font-weight:bold; }}
-  .block-meta {{ color:#6c7a96; font-size:11px; margin-top:2px; }}
-  .block-ts   {{ color:#4e9eff; }}
-  .tag-ad     {{ background:#f38ba833; color:#f38ba8; padding:1px 5px; border-radius:3px; font-size:10px; }}
-  .tag-warn   {{ background:#fab38733; color:#fab387; padding:1px 5px; border-radius:3px; font-size:10px; }}
-  .tag-clean  {{ background:#a6e3a133; color:#a6e3a1; padding:1px 5px; border-radius:3px; font-size:10px; }}
-  .reason-tag {{ background:#2a3347; color:#6c7a96; padding:1px 4px; border-radius:3px;
-                 font-size:10px; margin-right:3px; }}
+  .file-header {{ margin-top:14px; margin-bottom:2px; padding:5px 10px;
+                  background:#1e2535; border-left:3px solid #f38ba8; color:#cdd6f4; }}
+  .file-warn   {{ border-left-color:#fab387; }}
+  .block-ad    {{ margin:2px 0 2px 12px; padding:5px 10px; background:#1e1520;
+                  border-left:2px solid #f38ba8; }}
+  .block-warn  {{ margin:2px 0 2px 12px; padding:5px 10px; background:#1e1a15;
+                  border-left:2px solid #fab387; }}
+  .block-text  {{ color:#ff9eb5; font-weight:bold; font-size:13px; }}
+  .block-text-warn {{ color:#ffc990; font-weight:bold; font-size:13px; }}
+  .block-ts    {{ color:#7dcfff; font-size:12px; }}
+  .block-meta  {{ color:#6c7a96; font-size:11px; margin-top:3px; }}
+  .tag-ad      {{ color:#ff9eb5; font-weight:bold; }}
+  .tag-warn    {{ color:#ffc990; font-weight:bold; }}
+  .tag-clean   {{ color:#9ece6a; font-weight:bold; }}
+  .reason      {{ color:#565f89; font-size:11px; margin-right:6px; }}
+  .divider     {{ color:#2a3347; }}
 </style>
 <div class="section">BATCH SUMMARY</div>
 <div class="stat-row"><span class="stat-label">Threshold: </span>
@@ -524,26 +527,24 @@ class BatchPanel(QWidget):
         ads, warns = _classify(fr.subtitle, t)
 
         html = [f"""<style>
-  body {{ background:#0f1117; color:#cdd6f4; font-family:Consolas,monospace;
-          font-size:12px; margin:8px; }}
-  .file-path {{ color:#6c7a96; font-size:11px; word-break:break-all; }}
-  .file-name {{ color:#fff; font-weight:bold; font-size:13px; }}
-  .summary   {{ margin:6px 0 10px 0; color:#6c7a96; }}
-  .block-ad  {{ margin:4px 0; padding:5px 10px; background:#f38ba822;
+  body {{ background:#161b26; color:#cdd6f4; font-family:Consolas,monospace;
+          font-size:13px; margin:8px; }}
+  .file-path {{ color:#6c7a96; font-size:12px; word-break:break-all; }}
+  .file-name {{ color:#ffffff; font-weight:bold; font-size:14px; }}
+  .summary   {{ margin:6px 0 12px 0; color:#6c7a96; font-size:12px;
+                border-bottom:1px solid #2a3347; padding-bottom:6px; }}
+  .block-ad  {{ margin:4px 0; padding:6px 12px; background:#1e1520;
                 border-left:3px solid #f38ba8; }}
-  .block-warn{{ margin:4px 0; padding:5px 10px; background:#fab38722;
+  .block-warn{{ margin:4px 0; padding:6px 12px; background:#1e1a15;
                 border-left:3px solid #fab387; }}
-  .tag-ad    {{ background:#f38ba833; color:#f38ba8; padding:1px 5px;
-                border-radius:3px; font-size:10px; }}
-  .tag-warn  {{ background:#fab38733; color:#fab387; padding:1px 5px;
-                border-radius:3px; font-size:10px; }}
-  .ts        {{ color:#4e9eff; }}
-  .ad-text   {{ color:#f38ba8; font-weight:bold; }}
-  .warn-text {{ color:#fab387; font-weight:bold; }}
-  .rm        {{ color:#6c7a96; font-size:10px; }}
-  .reason    {{ background:#2a3347; color:#6c7a96; padding:1px 4px;
-                border-radius:3px; font-size:10px; margin-right:3px; }}
-  .clean-msg {{ color:#a6e3a1; margin-top:10px; }}
+  .tag-ad    {{ color:#ff9eb5; font-weight:bold; }}
+  .tag-warn  {{ color:#ffc990; font-weight:bold; }}
+  .ts        {{ color:#7dcfff; font-size:12px; }}
+  .ad-text   {{ color:#ff9eb5; font-weight:bold; font-size:13px; }}
+  .warn-text {{ color:#ffc990; font-weight:bold; font-size:13px; }}
+  .rm        {{ color:#565f89; font-size:11px; }}
+  .reason    {{ color:#565f89; font-size:11px; margin-right:8px; }}
+  .clean-msg {{ color:#9ece6a; margin-top:12px; font-size:13px; }}
 </style>
 <div class="file-path">{esc(fr.path.parent)}/</div>
 <div class="file-name">{esc(fr.path.name)}</div>

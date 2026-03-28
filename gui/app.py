@@ -395,7 +395,7 @@ class MainWindow(QMainWindow):
         self._status = QStatusBar()
         self.setStatusBar(self._status)
         self._status.showMessage("Ready — drop subtitle files to begin")
-        self._version_label = QLabel("Beta 2")
+        self._version_label = QLabel("Beta 3")
         self._version_label.setStyleSheet(f"color: {FG2}; font-size: 11px; padding-right: 6px;")
         self._status.addPermanentWidget(self._version_label)
 
@@ -494,8 +494,16 @@ class MainWindow(QMainWindow):
         self._btn_mark_ad.setObjectName("btn_remove")
         self._btn_keep = QPushButton("✓  Keep Block")
         self._btn_keep.setObjectName("btn_keep")
+        self._btn_always_ad = QPushButton("⚑  Always Mark as Ad…")
+        self._btn_always_ad.setObjectName("btn_remove")
+        self._btn_always_ad.setToolTip(
+            "Add a regex pattern for this block's text to a profile,\n"
+            "so it is automatically flagged in all future files."
+        )
+        self._btn_always_ad.setEnabled(False)
         btn_row.addWidget(self._btn_mark_ad)
         btn_row.addWidget(self._btn_keep)
+        btn_row.addWidget(self._btn_always_ad)
         btn_row.addStretch()
 
         detail_layout.addWidget(lbl_detail)
@@ -530,6 +538,11 @@ class MainWindow(QMainWindow):
         from .video_panel import VideoScanPanel
         self._video_panel = VideoScanPanel()
         self._tabs.addTab(self._video_panel, "Video Scan")
+
+        # Tab 5: Regex profile editor
+        from .regex_editor import RegexEditorPanel
+        self._regex_editor = RegexEditorPanel()
+        self._tabs.addTab(self._regex_editor, "Regex Editor")
 
         # Bottom action bar
         action_bar = QHBoxLayout()
@@ -568,6 +581,8 @@ class MainWindow(QMainWindow):
 
         # Cross-panel wiring
         self._batch_panel.open_file_requested.connect(self._open_file_in_review)
+        self._regex_editor.pattern_saved.connect(self._on_pattern_saved)
+        self._btn_always_ad.clicked.connect(self._always_mark_as_ad)
 
         # Keyboard shortcuts
         QShortcut(QKeySequence("Delete"), self, self._mark_current_as_ad)
@@ -698,10 +713,13 @@ class MainWindow(QMainWindow):
 
     def _on_block_selected(self, row: int):
         if row < 0 or self._subtitle is None:
+            self._btn_always_ad.setEnabled(False)
             return
         item = self._block_list.item(row)
         if item is None or not isinstance(item, BlockRow):
+            self._btn_always_ad.setEnabled(False)
             return
+        self._btn_always_ad.setEnabled(True)
         block = item.block
 
         # Detail pane
@@ -847,6 +865,46 @@ class MainWindow(QMainWindow):
                 break
         # Switch to Review tab (index 0)
         self._tabs.setCurrentIndex(0)
+
+    # ── Always Mark as Ad ────────────────────────────────────────────────────
+
+    def _always_mark_as_ad(self):
+        row = self._block_list.currentRow()
+        if row < 0 or self._subtitle is None:
+            return
+        item = self._block_list.item(row)
+        if not isinstance(item, BlockRow):
+            return
+        block = item.block
+
+        from .regex_editor import AddPatternDialog
+        dlg = AddPatternDialog(block.text, parent=self)
+        dlg.exec()
+        if dlg.was_saved:
+            # Also mark this block as an ad in the current session
+            block.regex_matches = 3
+            item._update_display()
+            self._refresh_stats()
+            self._status.showMessage(
+                "Pattern saved and engine reloaded — re-analysing current file…"
+            )
+            # Re-analyse the current file so the new pattern fires on it too
+            self._on_pattern_saved()
+
+    def _on_pattern_saved(self):
+        """Called when regex editor saves — re-analyse the currently loaded file."""
+        if self._subtitle is not None:
+            from core.cleaner import analyze
+            for block in self._subtitle.blocks:
+                block.regex_matches = 0
+                block.hints = []
+                block.matched_patterns = []
+                block.ad_score = 0.0
+            analyze(self._subtitle)
+            self._populate_block_list(self._subtitle)
+            self._refresh_stats()
+            self._update_report()
+            self._status.showMessage("Engine reloaded — file re-analysed with new patterns.")
 
     # ── Report tab ────────────────────────────────────────────────────────
 
