@@ -1,84 +1,81 @@
-# Subcleaner
-Subcleaner is a python3 script for removing ads from .srt subtitle files.
-The script is more sophisticated than a simple search and delete per line
-and uses different regex profiles for different languages.
-Once the script have identified ad-blocks they get removed and the remaining blocks 
-get re-indexed.
+# SubClean
 
-Can clean entire libraries in recursive mode and works well with [Bazarr](https://github.com/morpheus65535/bazarr) 
-directly installed or as a container from the [linuxserver/bazarr](https://hub.docker.com/r/linuxserver/bazarr) image.
+Remove ads, watermarks, and junk from subtitle files.
 
-# Installing
-Cloning and running with python3 should work.
+Supports **.srt**, **.ass**, **.ssa**, **.vtt**
 
-```cd /opt```
+Inspired by [KBlixt/subcleaner](https://github.com/KBlixt/subcleaner), extended with multi-format support and a full GUI.
 
-```git clone https://github.com/KBlixt/subcleaner.git```
+---
 
-```cd subcleaner```
+## Setup
 
-Install the default config simply by running the script once or copy the default config into
-the script root directory.
+```
+pip install -r requirements.txt
+```
 
-```python3 ./subcleaner.py -h```
+Python 3.10+ required.
 
-With the subcleaner.conf file installed you can modify the settings within it.
-the config file contains instructions what each of the settings does.
+---
 
-## Bazarr
-Unlock the scripts full potential by running it after downloading a subtitle from 
-[Bazarr](https://github.com/morpheus65535/bazarr). Enable custom post-processing and use
-the command:
+## GUI
 
-```python3 /opt/subcleaner/subcleaner.py "{{subtitles}}" -s``` (note the quotation)
+```
+python subcleaner.py --gui
+```
 
-It should work 
-right out the gate provided the paths and permissions are set up correctly.
+Or pre-load files:
+```
+python subcleaner.py movie.en.srt --gui
+```
 
-in the bazarr log it should confirm that the script ran successfully or give you 
-an error message that tells you what's wrong. if nothing is output then you've probably 
-set the script path wrong.
+**Workflow:**
+1. Drop subtitle files onto the drop zone (or use Browse / Open Folder)
+2. Each file is analyzed automatically — ad blocks are highlighted red, warnings in orange
+3. Click a block to review its content and which patterns triggered
+4. Use **✕ Mark as Ad** / **✓ Keep Block** (or Delete/Space keys) to adjust decisions
+5. Click **⚡ Clean & Save** to write the cleaned file
 
-## Docker
+---
 
-If you run Bazarr in a docker container, as you should,
-make sure the Bazarr container have access to the script directory. Either
-mount /opt/subcleaner directly into the container as a volume or install the script inside 
-the Bazarr config directory.
+## CLI
 
-I have verified that this works on the [linuxserver/bazarr](https://hub.docker.com/r/linuxserver/bazarr) image.
+```bash
+# Clean a single file
+python subcleaner.py movie.en.srt
 
-# Languages:
-The script have a few language profiles included by default:
+# Dry run (detect only, don't write)
+python subcleaner.py movie.en.srt --dry-run
 
-- English
-- Spanish
-- Portuguese
-- Dutch
-- Indonesian
-- Swedish
+# Recursive folder
+python subcleaner.py /media/subtitles -r
 
-If you want to run the script against any other language you'll have to either create a profile for it
-or disable the requirement in the subcleaner.conf file. It's recommended to create
-a language profile. read the README in the regex_profiles directory for more info and guidance.
+# Only English files
+python subcleaner.py /media/subtitles -r --language en
 
-### If you make a useful regex profile for a non-default language, PLEASE let me know! 
-I'll review it and add it to the included default profiles. And it'll help out others that use 
-that language in the future! :)
+# Also remove uncertain/warning blocks
+python subcleaner.py movie.en.ass --remove-warnings
+```
 
-__________________
+---
 
+## What gets detected
 
-# Thank you :)
-Please, If you find any issues or have any questions feel free to 
-open an issue or discussion.
+| Category | Examples |
+|---|---|
+| Distributor watermarks | OpenSubtitles, YTS/YIFY, Addic7ed, Subscene, SubDivX… |
+| Credit lines | "Subtitles by", "Sync and corrected by", "Downloaded from"… |
+| URLs | Any http/www/domain.com pattern |
+| Release tags | BluRay, WEB-DL, x264, HEVC… |
+| Language-specific | English donation asks, promo text, visit-us patterns |
 
-__________________
-###### Future (possibly):
+Detection uses **confidence scoring** — blocks above 85% are auto-flagged as ads, 45–85% as warnings. The GUI lets you review and override every decision before saving.
 
-* Automatic subtitle deletion if language don't match label.
+---
 
-* better ui for confirming/reverting deletion of ads.
+## Coming in Phase 3–4
 
-* ASS support?
-
+- Batch folder mode with summary report
+- `ffprobe` integration to scan subtitles embedded inside MKV/MP4
+- Regex profile editor in the GUI
+- Windows `.exe` via PyInstaller
