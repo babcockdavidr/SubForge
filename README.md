@@ -4,7 +4,7 @@
 
 Supports `.srt` · `.ass` · `.ssa` · `.vtt` · embedded subtitles inside `.mkv` `.mp4` and more
 
-Built on the detection engine from [KBlixt/subcleaner](https://github.com/KBlixt/subcleaner), extended with multi-format support, a full GUI, batch processing, and embedded subtitle scanning.
+Built on the detection engine from [KBlixt/subcleaner](https://github.com/KBlixt/subcleaner), extended with multi-format support, a full GUI, batch processing, embedded subtitle scanning, and an in-app regex profile editor.
 
 ---
 
@@ -36,60 +36,112 @@ python subcleaner.py movie.en.srt
 
 ---
 
-## GUI — Review Tab
+## GUI Overview
 
-The Review tab is for inspecting and cleaning one file at a time.
+The main window has five tabs: **Review**, **Report**, **Batch**, **Video Scan**, and **Regex Editor**. The status bar at the bottom always shows the current state on the left and the version number on the right.
+
+---
+
+## Review Tab
+
+For loading, inspecting, and cleaning individual subtitle files.
 
 **Workflow:**
-1. Drop one or more subtitle files onto the drop zone, or click **Browse** / **Open Folder**
-2. Files are analysed automatically in the background — the file queue on the left turns red for files with ads, orange for warnings, green for clean
+1. Drop one or more subtitle files onto the drop zone, or use **Browse** / **Open Folder**
+2. Files are analysed automatically in a background thread — the file queue on the left turns red for files with ads, orange for warnings, green for clean
 3. Each subtitle block is listed with its timestamp, confidence score, and a colour indicator (red = ad, orange = warning, grey = clean)
-4. Click any block to see its full text and exactly which detection patterns fired
-5. Use **✕ Mark as Ad** or **✓ Keep Block** to override any decision — or use the keyboard shortcuts **Delete** and **Space**
-6. Click **⚡ Clean & Save** (or **Ctrl+S**) to write the cleaned file — a confirmation dialog shows how many blocks will be removed
+4. Click any block to see its full text in the detail pane, along with exactly which detection patterns triggered it
+5. Use the three action buttons to handle each block:
+   - **✕ Mark as Ad** — flags this block for removal in this session (`Delete` key)
+   - **✓ Keep Block** — clears any flag, marks it as clean (`Space` key)
+   - **⚑ Always Mark as Ad…** — opens the Add Pattern dialog (see below)
+6. Click **⚡ Clean & Save** (`Ctrl+S`) to write the cleaned file — a confirmation dialog shows exactly how many blocks will be removed
 7. Use **← Prev File** / **Next File →** to move through the queue
 
-The **Report** tab shows a full per-file analysis report with every flagged block and its reasons.
+The **Report** tab alongside Review shows a full per-file analysis with every flagged block and its scoring reasons.
 
 ---
 
-## GUI — Batch Tab
+## Always Mark as Ad (Add Pattern Dialog)
 
-The Batch tab is for cleaning an entire media library in one pass — including libraries where each movie or show is in its own subfolder.
+The **⚑ Always Mark as Ad…** button teaches SubScrubber to recognise a pattern permanently, so it is automatically flagged in every future file — not just the current one.
 
 **Workflow:**
-1. Click **📂 Select Base Folder** and choose your top-level movies or shows folder — SubScrubber scans all subfolders recursively
-2. The file count is shown immediately so you know what was found
-3. Click **⚡ Scan All** — all files are analysed in the background with a live progress bar
-4. Results appear in the file list, colour-coded red / orange / green. Each row shows `MovieFolder/subtitle.srt` so you can tell which film it belongs to
-5. Click any file to see a detailed HTML report for that file in the panel on the right — ad blocks are shown in red cards, warnings in orange, with reason tags underneath each one
-6. Adjust the **Sensitivity slider** (1–5) to tune how aggressively blocks are flagged:
+1. Select a flagged or suspicious block in the Review tab
+2. Click **⚑ Always Mark as Ad…** — a dialog opens showing the block's original text
+3. A regex pattern is auto-suggested based on the text:
+   - URLs and domains are extracted and escaped (e.g. `www.somesite.com` → `www\.somesite\.com`)
+   - Capitalised proper nouns are wrapped in word boundaries (e.g. `TeamAwesome` → `\bTeamAwesome\b`)
+   - Everything else is escaped and boundary-wrapped as a fallback
+4. Edit the suggested pattern if needed — it's a standard case-insensitive regex
+5. Click **Test match** to verify the pattern actually matches the block text before saving
+6. Choose which profile to save it to (defaults to `global.conf` which applies to all languages)
+7. Choose the detection level:
+   - **PURGE** — any match removes the block outright (+3 points)
+   - **WARNING** — any match adds a caution flag (+1 point)
+8. Click **Save** — the pattern is written to the `.conf` file, the engine hot-reloads immediately, the current block is marked as an ad, and the open file is re-analysed with the new pattern applied
+
+---
+
+## Batch Tab
+
+For cleaning an entire media library in one pass, including libraries where each movie or show lives in its own subfolder.
+
+**Workflow:**
+1. Click **📂 Select Base Folder** and choose your top-level movies or shows folder — SubScrubber walks all subfolders recursively and counts every subtitle file it finds
+2. Click **⚡ Scan All** — all files are analysed in a background thread with a live progress bar
+3. Results appear in the file list, colour-coded red / orange / green. Each row shows `MovieFolder/subtitle.srt` so you can see which film each file belongs to at a glance
+4. Click any file in the list to see a detailed report on the right — ad blocks appear with a red left border and pink text, warnings with an orange border, timestamps in blue, and reason tags in grey below each block
+5. Use the **Sensitivity slider** (1–5) to control how aggressively blocks are flagged. Moving it instantly re-colours all rows without rescanning:
    - **1 — Very Aggressive**: catches almost everything, higher false-positive risk
    - **2 — Aggressive**: catches most ad patterns plus borderline cases
-   - **3 — Balanced** *(default)*: matches subcleaner's standard behaviour
-   - **4 — Conservative**: only removes blocks with strong multiple matches
+   - **3 — Balanced** *(default)*: matches subcleaner's original behaviour
+   - **4 — Conservative**: only removes blocks with multiple strong matches
    - **5 — Very Conservative**: only the most obvious, unambiguous ads
-   
-   Moving the slider instantly re-colours all rows and updates counts — no rescan needed.
-7. Optionally check **Also remove warnings** to include borderline blocks one level below the threshold
-8. Click **🗑 Clean & Save All** — a confirmation dialog shows exactly how many blocks from how many files will be removed, then writes everything in one shot
+6. Optionally check **Also remove warnings** to include blocks one level below the threshold
+7. Click **🗑 Clean & Save All** — a confirmation dialog shows exactly how many blocks from how many files will be removed, then writes everything in one shot
+8. To review a specific file in detail before cleaning, select it and click **Open in Review Tab →**
 
 ---
 
-## GUI — Video Scan Tab
+## Video Scan Tab
 
-The Video Scan tab inspects subtitle tracks that are embedded directly inside video container files, without modifying the video.
+Inspects subtitle tracks embedded directly inside video container files, without modifying the video. Useful for checking whether a movie file's built-in subtitles contain ads before you ever extract them.
 
-**Requires FFmpeg** installed and available on your system PATH.
+**Requires FFmpeg** installed and available on your system PATH. If FFmpeg is missing, a warning banner appears at the top of the tab.
 
 **Workflow:**
-1. Drop video files onto the drop zone, or click **Add Folder** to scan a directory
-2. Click **⚡ Scan Videos** — SubScrubber uses `ffprobe` to list all subtitle tracks, then extracts each text-based track with `ffmpeg` and runs the full detection engine on it
-3. Results appear as a tree: each video file is a root node, its subtitle tracks are children, colour-coded by status
-4. Click any track to see its codec, language, forced/default flags, block counts, and up to 5 sample flagged lines
-5. Image-based subtitle formats (Blu-ray PGS, DVD VOBSUB, DVB) are detected and listed but marked as unscannable — text extraction requires OCR which is not supported
+1. Drop video files onto the drop zone, or use **Add Folder** to scan a directory recursively
+2. Click **⚡ Scan Videos** — SubScrubber uses `ffprobe` to enumerate all subtitle tracks in each file, then `ffmpeg` to extract each text-based track to a temporary file, then runs the full detection engine on it
+3. Results appear as a collapsible tree — each video is a root node, its subtitle tracks are children, colour-coded by status (red = ads found, orange = warnings, green = clean, grey = image-based / unscannable)
+4. Click any track to see its codec, language, forced/default flags, total block count, and up to 5 sample flagged lines with their matched pattern names
+5. Image-based subtitle formats (Blu-ray PGS, DVD VOBSUB, DVB Teletext) are detected and listed but cannot be scanned — text extraction from image subtitles requires OCR, which is not supported
 
-> **Note:** SubScrubber does not modify video files. To clean embedded subtitles, extract the track with FFmpeg, clean it with SubScrubber, then remux with MKVToolNix.
+> **Note:** SubScrubber never modifies video files. To actually clean embedded subtitles: extract the track with FFmpeg, clean it with SubScrubber, then remux with MKVToolNix.
+
+---
+
+## Regex Editor Tab
+
+A full in-app editor for the regex pattern profiles that drive detection. Changes are saved to disk and applied immediately without restarting.
+
+**Left panel — profile list:**
+Each `.conf` file in `regex_profiles/default/` appears here with its language scope shown. Click one to load it into the editor.
+
+**Right panel — pattern editor:**
+The raw `.conf` file content with syntax highlighting — keys in blue, regex values in green, comments in grey, section headers in yellow. You can edit the file directly here.
+
+**Quick-add bar** (below the editor):
+Enter a section (`PURGE_REGEX` or `WARNING_REGEX`), an optional key name, and a regex value, then click **Add**. The entry is inserted into the editor content automatically. Leave the key blank to auto-generate one following the existing naming scheme (e.g. `global_purge5`, `english_warn3`).
+
+**Saving:**
+Click **💾 Save Profile** to write changes to disk and hot-reload the detection engine. The status line confirms success or reports any errors. Click **Discard Changes** to revert to the last saved version.
+
+**New profiles:**
+Click **+ New Profile…**, enter a name, and a template `.conf` file is created and selected automatically.
+
+**Manual reload:**
+Click **↺ Reload Engine** at any time to re-read all profiles from disk without saving — useful if you edited a file externally.
 
 ---
 
@@ -108,7 +160,7 @@ python subcleaner.py /media/shows -r
 # Scan and print report only, never prompt to save
 python subcleaner.py /media/shows -r --report-only
 
-# Include verbose output (list clean files too)
+# Include verbose output (also list clean files)
 python subcleaner.py /media/shows -r --report-only -v
 
 # Only process files tagged with a specific language
@@ -123,25 +175,34 @@ python subcleaner.py /media/shows -r -y
 # Scan embedded subtitle tracks inside video files
 python subcleaner.py movie.mkv --scan-video
 python subcleaner.py /media/movies -r --scan-video
+
+# Launch the GUI, optionally pre-loading files
+python subcleaner.py --gui
+python subcleaner.py movie.en.srt --gui
 ```
 
 ---
 
 ## What Gets Detected
 
-Detection uses the regex profile system from subcleaner. Profiles are stored as `.conf` files in `regex_profiles/default/` and can be edited or extended without touching any Python code.
+Detection is driven by `.conf` regex profiles. Profiles are stored in `regex_profiles/default/` and can be edited in the Regex Editor tab or directly in any text editor.
 
 | Category | Examples |
 |---|---|
 | Distributor watermarks | OpenSubtitles, YTS/YIFY, Addic7ed, Subscene, SubDivX, podnapisi, titlovi… |
-| Named watermark accounts | Hundreds of known subtitle group names and handles |
+| Named subtitle groups | Hundreds of known group names, handles, and release tags |
 | Credit lines | "Subtitles by", "Sync and corrected by", "Downloaded from", "Ripped by"… |
-| URLs | `http://`, `www.`, `.com` / `.net` / `.tv` / `.xyz` domains |
-| Encoded release info | BluRay, WEB-DL, x264, HEVC, 1080p in subtitle text |
+| URLs | `http://`, `www.`, `.com` / `.net` / `.tv` / `.xyz` / `.app` domains |
+| Release metadata | BluRay, WEB-DL, x264, HEVC, 1080p appearing in subtitle text |
 | Promotional text | "Watch Movies & Series", "Become a VIP member", "Support us at"… |
-| Language-specific patterns | English, Dutch, Spanish, Portuguese, Swedish, Hebrew, Indonesian profiles included |
+| Language-specific patterns | English, Dutch, Spanish, Portuguese, Swedish, Hebrew, Indonesian profiles built in |
 
-**Scoring model:** each PURGE pattern match adds 3 points, each WARNING pattern adds 1. Contextual punishers add 1 point each for factors like being in the first or last 3 blocks, being adjacent to a confirmed ad, or having identical content elsewhere in the file. The threshold (default: 3 points) is adjustable in the Batch tab slider.
+**Scoring model:**
+- Each PURGE_REGEX match: **+3 points**
+- Each WARNING_REGEX match: **+1 point**
+- Contextual punishers each add **+1 point**: appearing in the first or last 3 blocks (`close_to_start` / `close_to_end`), being within 15 blocks of a confirmed ad (`nearby_ad`), being adjacent to a warning-level block (`adjacent_ad`), having identical content elsewhere in the file (`similar_content`), or starting in the first second of the file (`quick_start`)
+- Structural detectors can promote blocks without regex matches: `wedged_block` (sandwiched between confirmed ads), `chain_block` (part of a run of incrementally-growing linked blocks)
+- Default threshold: **≥ 3 points = ad**, **= 2 points = warning**. Adjustable in the Batch tab slider.
 
 ---
 
@@ -154,16 +215,17 @@ subcleaner_gui/
 ├── README.md
 ├── core/
 │   ├── __init__.py
-│   ├── subtitle.py        ← SRT / ASS / VTT parsers
-│   ├── cleaner.py         ← detection engine + regex profile loader
+│   ├── subtitle.py        ← SRT / ASS / VTT parsers + SubBlock model
+│   ├── cleaner.py         ← detection engine, punishers, detectors, profile loader
 │   ├── batch.py           ← batch scan and save engine
-│   └── ffprobe.py         ← video container probing and track extraction
+│   └── ffprobe.py         ← video container probing and subtitle track extraction
 ├── gui/
 │   ├── __init__.py
-│   ├── app.py             ← main window + Review tab
+│   ├── app.py             ← main window, Review tab, Always Mark as Ad dialog wiring
 │   ├── batch_panel.py     ← Batch tab
 │   ├── video_panel.py     ← Video Scan tab
-│   └── colors.py          ← shared colour palette
+│   ├── regex_editor.py    ← Regex Editor tab + AddPatternDialog
+│   └── colors.py          ← shared colour palette constants
 └── regex_profiles/
     └── default/
         ├── global.conf    ← applies to all languages
@@ -179,23 +241,29 @@ subcleaner_gui/
 
 ---
 
-## Adding Custom Regex Profiles
+## Adding Custom Regex Profiles (manually)
 
-Create a new `.conf` file in `regex_profiles/default/` following this structure:
+Create a `.conf` file in `regex_profiles/default/` — or use the **+ New Profile…** button in the Regex Editor tab. Structure:
 
 ```ini
 [META]
+# For a language-specific profile:
 language_codes = fr, fre, french
 
+# For a global profile (applies to all languages):
+# excluded_language_codes =
+
 [PURGE_REGEX]
+# Any match here removes the block outright (+3 pts per unique match)
 my_purge1: some\.website\.com
 my_purge2: \b(SomeWatermark|AnotherGroup)\b
 
 [WARNING_REGEX]
+# Any match here adds 1 point toward the removal threshold
 my_warn1: \b(subtitles|captions)\b
 ```
 
-Any match in `PURGE_REGEX` immediately flags the block for removal. `WARNING_REGEX` matches add 1 point each toward the threshold. Restart SubScrubber for new profiles to take effect.
+Changes take effect immediately when saved through the Regex Editor tab. If editing files externally, use the **↺ Reload Engine** button or restart SubScrubber.
 
 ---
 
