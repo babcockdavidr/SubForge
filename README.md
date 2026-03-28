@@ -55,31 +55,10 @@ For loading, inspecting, and cleaning individual subtitle files.
    - **✕ Mark as Ad** — flags this block for removal in this session (`Delete` key)
    - **✓ Keep Block** — clears any flag, marks it as clean (`Space` key)
    - **⚑ Always Mark as Ad…** — opens the Add Pattern dialog (see below)
-6. Click **⚡ Clean & Save** (`Ctrl+S`) to write the cleaned file — a confirmation dialog shows exactly how many blocks will be removed
+6. Click **Clean & Save** (`Ctrl+S`) to write the cleaned file — a confirmation dialog shows exactly how many blocks will be removed
 7. Use **← Prev File** / **Next File →** to move through the queue
 
 The **Report** tab alongside Review shows a full per-file analysis with every flagged block and its scoring reasons.
-
----
-
-## Always Mark as Ad (Add Pattern Dialog)
-
-The **⚑ Always Mark as Ad…** button teaches SubScrubber to recognise a pattern permanently, so it is automatically flagged in every future file — not just the current one.
-
-**Workflow:**
-1. Select a flagged or suspicious block in the Review tab
-2. Click **⚑ Always Mark as Ad…** — a dialog opens showing the block's original text
-3. A regex pattern is auto-suggested based on the text:
-   - URLs and domains are extracted and escaped (e.g. `www.somesite.com` → `www\.somesite\.com`)
-   - Capitalised proper nouns are wrapped in word boundaries (e.g. `TeamAwesome` → `\bTeamAwesome\b`)
-   - Everything else is escaped and boundary-wrapped as a fallback
-4. Edit the suggested pattern if needed — it's a standard case-insensitive regex
-5. Click **Test match** to verify the pattern actually matches the block text before saving
-6. Choose which profile to save it to (defaults to `global.conf` which applies to all languages)
-7. Choose the detection level:
-   - **PURGE** — any match removes the block outright (+3 points)
-   - **WARNING** — any match adds a caution flag (+1 point)
-8. Click **Save** — the pattern is written to the `.conf` file, the engine hot-reloads immediately, the current block is marked as an ad, and the open file is re-analysed with the new pattern applied
 
 ---
 
@@ -88,8 +67,8 @@ The **⚑ Always Mark as Ad…** button teaches SubScrubber to recognise a patte
 For cleaning an entire media library in one pass, including libraries where each movie or show lives in its own subfolder.
 
 **Workflow:**
-1. Click **📂 Select Base Folder** and choose your top-level movies or shows folder — SubScrubber walks all subfolders recursively and counts every subtitle file it finds
-2. Click **⚡ Scan All** — all files are analysed in a background thread with a live progress bar
+1. Click **Select Base Folder** and choose your top-level movies or shows folder — SubScrubber walks all subfolders recursively and counts every subtitle file it finds
+2. Click **Scan All** — all files are analysed in a background thread with a live progress bar
 3. Results appear in the file list, colour-coded red / orange / green. Each row shows `MovieFolder/subtitle.srt` so you can see which film each file belongs to at a glance
 4. Click any file in the list to see a detailed report on the right — ad blocks appear with a red left border and pink text, warnings with an orange border, timestamps in blue, and reason tags in grey below each block
 5. Use the **Sensitivity slider** (1–5) to control how aggressively blocks are flagged. Moving it instantly re-colours all rows without rescanning:
@@ -112,7 +91,7 @@ Inspects subtitle tracks embedded directly inside video container files, without
 
 **Workflow:**
 1. Drop video files onto the drop zone, or use **Add Folder** to scan a directory recursively
-2. Click **⚡ Scan Videos** — SubScrubber uses `ffprobe` to enumerate all subtitle tracks in each file, then `ffmpeg` to extract each text-based track to a temporary file, then runs the full detection engine on it
+2. Click **Scan Videos** — SubScrubber uses `ffprobe` to enumerate all subtitle tracks in each file, then `ffmpeg` to extract each text-based track to a temporary file, then runs the full detection engine on it
 3. Results appear as a collapsible tree — each video is a root node, its subtitle tracks are children, colour-coded by status (red = ads found, orange = warnings, green = clean, grey = image-based / unscannable)
 4. Click any track to see its codec, language, forced/default flags, total block count, and up to 5 sample flagged lines with their matched pattern names
 5. Image-based subtitle formats (Blu-ray PGS, DVD VOBSUB, DVB Teletext) are detected and listed but cannot be scanned — text extraction from image subtitles requires OCR, which is not supported
@@ -135,13 +114,34 @@ The raw `.conf` file content with syntax highlighting — keys in blue, regex va
 Enter a section (`PURGE_REGEX` or `WARNING_REGEX`), an optional key name, and a regex value, then click **Add**. The entry is inserted into the editor content automatically. Leave the key blank to auto-generate one following the existing naming scheme (e.g. `global_purge5`, `english_warn3`).
 
 **Saving:**
-Click **💾 Save Profile** to write changes to disk and hot-reload the detection engine. The status line confirms success or reports any errors. Click **Discard Changes** to revert to the last saved version.
+Click **Save Profile** to write changes to disk and hot-reload the detection engine. The status line confirms success or reports any errors. Click **Discard Changes** to revert to the last saved version.
 
 **New profiles:**
 Click **+ New Profile…**, enter a name, and a template `.conf` file is created and selected automatically.
 
 **Manual reload:**
 Click **↺ Reload Engine** at any time to re-read all profiles from disk without saving — useful if you edited a file externally.
+
+---
+
+## Always Mark as Ad (Add Pattern Dialog)
+
+The **⚑ Always Mark as Ad…** button (located on the Review tab) teaches SubScrubber to recognise a pattern permanently, so it is automatically flagged in every future file — not just the current one.
+
+**Workflow:**
+1. Select a flagged or suspicious block in the Review tab
+2. Click **⚑ Always Mark as Ad…** — a dialog opens showing the block's original text
+3. A regex pattern is auto-suggested based on the text:
+   - URLs and domains are extracted and escaped (e.g. `www.somesite.com` → `www\.somesite\.com`)
+   - Capitalised proper nouns are wrapped in word boundaries (e.g. `TeamAwesome` → `\bTeamAwesome\b`)
+   - Everything else is escaped and boundary-wrapped as a fallback
+4. Edit the suggested pattern if needed — it's a standard case-insensitive regex
+5. Click **Test match** to verify the pattern actually matches the block text before saving
+6. Choose which profile to save it to (defaults to `global.conf` which applies to all languages)
+7. Choose the detection level:
+   - **PURGE** — any match removes the block outright (+3 points)
+   - **WARNING** — any match adds a caution flag (+1 point)
+8. Click **Save** — the pattern is written to the `.conf` file, the engine hot-reloads immediately, the current block is marked as an ad, and the open file is re-analysed with the new pattern applied
 
 ---
 
@@ -267,4 +267,4 @@ Changes take effect immediately when saved through the Regex Editor tab. If edit
 
 ---
 
-*SubScrubber Beta 2 — built on [subcleaner](https://github.com/KBlixt/subcleaner) by KBlixt (MIT licence)*
+*SubScrubber Beta 3 — built on [subcleaner](https://github.com/KBlixt/subcleaner) by KBlixt (MIT licence)*
