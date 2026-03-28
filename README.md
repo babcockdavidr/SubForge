@@ -1,4 +1,4 @@
-# SubClean
+# SubScrubber
 
 Remove ads, watermarks, and junk from subtitle files.
 
