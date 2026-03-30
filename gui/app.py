@@ -61,30 +61,54 @@ QPushButton {{
     padding: 5px 14px;
     font-size: 10pt;
 }}
-QPushButton:hover  {{ background: {ACCENT}22; border-color: {ACCENT}; }}
-QPushButton:pressed {{ background: {ACCENT}44; }}
-QPushButton:disabled {{ color: {FG2}; border-color: {BORDER}; }}
+QPushButton:hover  {{ background: rgba(78, 158, 255, 0.1); border-color: {ACCENT}; }}
+QPushButton:pressed {{ background: rgba(78, 158, 255, 0.2); }}
+QPushButton:disabled {{ color: {FG2}; border-color: {BORDER}; background: {BG3}; }}
 
 QPushButton#btn_remove {{
     color: {RED};
-    border-color: {RED}55;
+    border-color: {RED};
+    background: {BG3};
 }}
-QPushButton#btn_remove:hover {{ background: {RED}22; border-color: {RED}; }}
+QPushButton#btn_remove:hover {{ background: rgba(243, 139, 168, 0.15); border-color: {RED}; }}
+QPushButton#btn_remove:disabled {{ color: {FG2}; border-color: {BORDER}; background: {BG3}; }}
 
 QPushButton#btn_keep {{
     color: {GREEN};
-    border-color: {GREEN}55;
+    border-color: {GREEN};
+    background: {BG3};
 }}
-QPushButton#btn_keep:hover {{ background: {GREEN}22; border-color: {GREEN}; }}
+QPushButton#btn_keep:hover {{ background: rgba(166, 227, 161, 0.15); border-color: {GREEN}; }}
 
 QPushButton#btn_clean_all {{
-    background: {ACCENT}22;
+    background: rgba(78, 158, 255, 0.1);
     color: {ACCENT};
     border-color: {ACCENT};
     font-weight: bold;
     padding: 7px 20px;
 }}
-QPushButton#btn_clean_all:hover {{ background: {ACCENT}44; }}
+QPushButton#btn_clean_all:hover {{ background: rgba(78, 158, 255, 0.25); }}
+QPushButton#btn_clean_all:disabled {{ color: {FG2}; border-color: {BORDER}; background: {BG3}; }}
+
+QPushButton#btn_save {{
+    color: {RED};
+    border-color: {RED};
+    background: {BG3};
+    font-weight: bold;
+    padding: 7px 20px;
+}}
+QPushButton#btn_save:hover {{ background: rgba(243, 139, 168, 0.15); border-color: {RED}; }}
+QPushButton#btn_save:disabled {{ color: {FG2}; border-color: {BORDER}; background: {BG3}; }}
+
+QPushButton#btn_save_green {{
+    color: {GREEN};
+    border-color: {GREEN};
+    background: {BG3};
+    font-weight: bold;
+    padding: 7px 20px;
+}}
+QPushButton#btn_save_green:hover {{ background: rgba(166, 227, 161, 0.15); border-color: {GREEN}; }}
+QPushButton#btn_save_green:disabled {{ color: {FG2}; border-color: {BORDER}; background: {BG3}; }}
 
 /* ── Lists ── */
 QListWidget {{
@@ -232,7 +256,19 @@ QFrame#drop_zone {{
 }}
 QFrame#drop_zone:hover {{
     border-color: {ACCENT};
-    background: {ACCENT}0a;
+    background: {BG2};
+}}
+QFrame#drop_zone QPushButton {{
+    background: transparent;
+    border: 1px solid {BORDER};
+    color: {FG2};
+    padding: 4px 12px;
+    border-radius: 4px;
+}}
+QFrame#drop_zone QPushButton:hover {{
+    border-color: {ACCENT};
+    color: {FG};
+    background: {BG3};
 }}
 """
 
@@ -395,7 +431,7 @@ class MainWindow(QMainWindow):
         self._status = QStatusBar()
         self.setStatusBar(self._status)
         self._status.showMessage("Ready — drop subtitle files to begin")
-        self._version_label = QLabel("Beta 3")
+        self._version_label = QLabel("Beta 4 - MKVToolNix Update")
         self._version_label.setStyleSheet(f"color: {FG2}; font-size: 9pt; padding-right: 6px;")
         self._status.addPermanentWidget(self._version_label)
 
@@ -490,11 +526,11 @@ class MainWindow(QMainWindow):
 
         # Per-block action buttons
         btn_row = QHBoxLayout()
-        self._btn_mark_ad = QPushButton("✕  Mark as Ad")
+        self._btn_mark_ad = QPushButton("Mark as Ad")
         self._btn_mark_ad.setObjectName("btn_remove")
-        self._btn_keep = QPushButton("✓  Keep Block")
+        self._btn_keep = QPushButton("Keep Block")
         self._btn_keep.setObjectName("btn_keep")
-        self._btn_always_ad = QPushButton("⚑  Always Mark as Ad…")
+        self._btn_always_ad = QPushButton("Always Mark as Ad...")
         self._btn_always_ad.setObjectName("btn_remove")
         self._btn_always_ad.setToolTip(
             "Add a regex pattern for this block's text to a profile,\n"
@@ -546,12 +582,12 @@ class MainWindow(QMainWindow):
 
         # Bottom action bar
         action_bar = QHBoxLayout()
-        self._btn_prev = QPushButton("← Prev File")
-        self._btn_next = QPushButton("Next File →")
+        self._btn_prev = QPushButton("Prev File")
+        self._btn_next = QPushButton("Next File")
         self._lbl_stats = QLabel("")
         self._lbl_stats.setObjectName("file_status")
-        self._btn_clean_all = QPushButton("⚡  Clean && Save")
-        self._btn_clean_all.setObjectName("btn_clean_all")
+        self._btn_clean_all = QPushButton("Clean && Save")
+        self._btn_clean_all.setObjectName("btn_save_green")
         self._btn_clean_all.setEnabled(False)
 
         action_bar.addWidget(self._btn_prev)

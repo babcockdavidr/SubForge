@@ -147,12 +147,8 @@ class BatchPanel(QWidget):
         self._lbl_folder.setSizePolicy(QSizePolicy.Policy.Expanding,
                                        QSizePolicy.Policy.Preferred)
 
-        self._btn_folder = QPushButton("📂  Select Base Folder…")
-        self._btn_folder.setStyleSheet(
-            f"font-size: 13px; font-weight: bold; padding: 8px 18px;"
-            f"background: {BG3}; border: 1px solid {ACCENT}; color: {ACCENT};"
-            f"border-radius: 4px;"
-        )
+        self._btn_folder = QPushButton("Select Base Folder…")
+        self._btn_folder.setObjectName("btn_clean_all")
         self._btn_clear = QPushButton("Clear")
 
         folder_row.addWidget(self._btn_folder)
@@ -200,18 +196,13 @@ class BatchPanel(QWidget):
         self._chk_warnings = QCheckBox("Also remove warnings (one level below threshold)")
         self._chk_warnings.setStyleSheet(f"color: {FG2}; font-size: 10pt;")
 
-        self._btn_scan = QPushButton("⚡  Scan All")
+        self._btn_scan = QPushButton("Scan All")
         self._btn_scan.setObjectName("btn_clean_all")
         self._btn_scan.setEnabled(False)
 
-        self._btn_save = QPushButton("🗑  Clean && Save All")
-        self._btn_save.setObjectName("btn_clean_all")
+        self._btn_save = QPushButton("Clean && Save All")
+        self._btn_save.setObjectName("btn_save")
         self._btn_save.setEnabled(False)
-        self._btn_save.setStyleSheet(
-            f"font-size: 13px; font-weight: bold; padding: 8px 20px;"
-            f"background: {RED}22; color: {RED}; border: 1px solid {RED};"
-            f"border-radius: 4px;"
-        )
 
         action_row.addWidget(self._chk_warnings)
         action_row.addStretch()
@@ -242,7 +233,7 @@ class BatchPanel(QWidget):
         self._result_list.setFont(QFont("Consolas", 11))
         self._result_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
 
-        self._btn_open_in_review = QPushButton("Open in Review Tab →")
+        self._btn_open_in_review = QPushButton("Open in Review Tab")
         self._btn_open_in_review.setEnabled(False)
 
         ll.addWidget(lbl_files)
@@ -261,6 +252,7 @@ class BatchPanel(QWidget):
         self._report_text = QTextBrowser()
         self._report_text.setFont(QFont("Consolas", 11))
         self._report_text.setOpenExternalLinks(False)
+        self._report_text.anchorClicked.connect(self._on_report_link)
         self._report_text.setStyleSheet(
             f"background: {BG2}; color: {FG}; border: 1px solid {BORDER}; border-radius: 4px;"
         )
@@ -425,10 +417,10 @@ class BatchPanel(QWidget):
   .file-header {{ margin-top:14px; margin-bottom:2px; padding:5px 10px;
                   background:#1e2535; border-left:3px solid #f38ba8; color:#cdd6f4; }}
   .file-warn   {{ border-left-color:#fab387; }}
-  .block-ad    {{ margin:2px 0 2px 12px; padding:5px 10px; background:#1e1520;
-                  border-left:2px solid #f38ba8; }}
-  .block-warn  {{ margin:2px 0 2px 12px; padding:5px 10px; background:#1e1a15;
-                  border-left:2px solid #fab387; }}
+  .block-ad    {{ margin:2px 0 2px 0px; padding:5px 10px; background:#2a1a22;
+                  border-left:4px solid #f38ba8; }}
+  .block-warn  {{ margin:2px 0 2px 0px; padding:5px 10px; background:#231f15;
+                  border-left:4px solid #fab387; }}
   .block-text  {{ color:#ff9eb5; font-weight:bold; font-size:13px; }}
   .block-text-warn {{ color:#ffc990; font-weight:bold; font-size:13px; }}
   .block-ts    {{ color:#7dcfff; font-size:12px; }}
@@ -533,10 +525,14 @@ class BatchPanel(QWidget):
   .file-name {{ color:#ffffff; font-weight:bold; font-size:14px; }}
   .summary   {{ margin:6px 0 12px 0; color:#6c7a96; font-size:12px;
                 border-bottom:1px solid #2a3347; padding-bottom:6px; }}
-  .block-ad  {{ margin:4px 0; padding:6px 12px; background:#1e1520;
-                border-left:3px solid #f38ba8; }}
-  .block-warn{{ margin:4px 0; padding:6px 12px; background:#1e1a15;
-                border-left:3px solid #fab387; }}
+  .block-ad  {{ margin:4px 0; padding:6px 12px; background:#2a1a22;
+                border-left:4px solid #f38ba8; }}
+  .block-warn{{ margin:4px 0; padding:6px 12px; background:#231f15;
+                border-left:4px solid #fab387; }}
+  .block-kept{{ margin:4px 0; padding:6px 12px; background:#1e2535;
+                border-left:4px solid #6c7a96; }}
+  .tag-kept  {{ color:#6c7a96; font-style:italic; }}
+  .kept-text {{ color:#6c7a96; font-style:italic; text-decoration:line-through; }}
   .tag-ad    {{ color:#ff9eb5; font-weight:bold; }}
   .tag-warn  {{ color:#ffc990; font-weight:bold; }}
   .ts        {{ color:#7dcfff; font-size:12px; }}
@@ -556,42 +552,72 @@ class BatchPanel(QWidget):
 </div>"""]
 
         found_any = False
+        BRD = '#2a3347'
+        FG2 = '#6c7a96'
         for b in fr.subtitle.blocks:
-            if b.regex_matches >= t:
+            is_kept = getattr(b, '_kept', False)
+            if b.regex_matches >= t or (b.regex_matches == t - 1 and t > 1):
                 found_any = True
+                is_ad = b.regex_matches >= t
                 reasons_html = " ".join(
                     f'<span class="reason">{esc(h)}</span>'
                     for h in dict.fromkeys(b.hints)
                 )
+                if is_kept:
+                    div_cls  = "block-kept"
+                    tag      = '<span class="tag-kept">KEPT</span>'
+                    txt_cls  = "kept-text"
+                    btn_lbl  = "Kept — click to undo"
+                    btn_col  = FG2
+                elif is_ad:
+                    div_cls  = "block-ad"
+                    tag      = '<span class="tag-ad">AD</span>'
+                    txt_cls  = "ad-text"
+                    btn_lbl  = "Keep — not an ad"
+                    btn_col  = FG2
+                else:
+                    div_cls  = "block-warn"
+                    tag      = '<span class="tag-warn">WARN</span>'
+                    txt_cls  = "warn-text"
+                    btn_lbl  = "Keep — not an ad"
+                    btn_col  = FG2
                 html.append(
-                    f'<div class="block-ad">'
-                    f'<span class="tag-ad">AD</span>&nbsp;'
-                    f'<span class="rm">rm={b.regex_matches}</span>&nbsp;&nbsp;'
-                    f'<span class="ts">[{esc(b.start)}]</span><br>'
-                    f'<span class="ad-text">{esc(b.text[:120])}</span><br>'
-                    f'<span>{reasons_html}</span>'
-                    f'</div>'
-                )
-            elif b.regex_matches == t - 1 and t > 1:
-                found_any = True
-                reasons_html = " ".join(
-                    f'<span class="reason">{esc(h)}</span>'
-                    for h in dict.fromkeys(b.hints)
-                )
-                html.append(
-                    f'<div class="block-warn">'
-                    f'<span class="tag-warn">WARN</span>&nbsp;'
-                    f'<span class="rm">rm={b.regex_matches}</span>&nbsp;&nbsp;'
-                    f'<span class="ts">[{esc(b.start)}]</span><br>'
-                    f'<span class="warn-text">{esc(b.text[:120])}</span><br>'
+                    f'<div class="{div_cls}">'
+                    f'<table width="100%" cellpadding="0" cellspacing="0"><tr>'
+                    f'<td>{tag}&nbsp;<span class="rm">rm={b.regex_matches}</span>'
+                    f'&nbsp;&nbsp;<span class="ts">[{esc(b.start)}]</span></td>'
+                    f'<td align="right">'
+                    f'<a href="keep:{id(b)}" style="color:{btn_col};font-size:10pt;'
+                    f'border:1px solid {BRD};padding:2px 10px;'
+                    f'border-radius:3px;text-decoration:none;white-space:nowrap;">'
+                    f'{btn_lbl}</a>'
+                    f'</td></tr></table>'
+                    f'<span class="{txt_cls}">{esc(b.text[:120])}</span><br>'
                     f'<span>{reasons_html}</span>'
                     f'</div>'
                 )
 
         if not found_any:
-            html.append('<div class="clean-msg">✓ No issues found at this threshold.</div>')
+            html.append('<div class="clean-msg">No issues found at this threshold.</div>')
 
         self._report_text.setHtml("\n".join(html))
+
+    def _on_report_link(self, url):
+        """Handle Keep/undo links in the per-file detail report."""
+        url_str = url.toString()
+        if not url_str.startswith("keep:"):
+            return
+        block_id = int(url_str[5:])
+        if self._batch_result:
+            for fr in self._batch_result.results:
+                if fr.subtitle:
+                    for b in fr.subtitle.blocks:
+                        if id(b) == block_id:
+                            b._kept = not getattr(b, '_kept', False)
+                            row = self._result_list.currentRow()
+                            if row >= 0:
+                                self._on_row_selected(row)
+                            return
 
     def _open_in_review(self):
         if not self._batch_result:
@@ -616,11 +642,13 @@ class BatchPanel(QWidget):
         for r in self._batch_result.results:
             if not r.ok or not r.subtitle:
                 continue
-            remove = [b for b in r.subtitle.blocks if b.regex_matches >= t]
+            remove = [b for b in r.subtitle.blocks
+                      if b.regex_matches >= t and not getattr(b, '_kept', False)]
             if inc_warns:
                 remove += [b for b in r.subtitle.blocks
                            if b.regex_matches == t - 1 and t > 1
-                           and id(b) not in {id(x) for x in remove}]
+                           and id(b) not in {id(x) for x in remove}
+                           and not getattr(b, '_kept', False)]
             if remove:
                 to_clean.append((r, remove))
 
