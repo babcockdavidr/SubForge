@@ -1,10 +1,28 @@
-# SubScrubber — Beta 4: MKVToolNix Update
+# SubScrubber — v0.5.0: MP4 Remux Update
 
 **Remove ads, watermarks, and distributor junk from subtitle files.**
 
 SubScrubber is the ultimate, cross-platform, GUI-enabled, multi-format subtitle cleaning tool. Supports `.srt` · `.ass` · `.ssa` · `.vtt` · and embedded subtitles inside `.mkv` `.mp4` and more
 
-Based on the detection engine from [KBlixt/subcleaner](https://github.com/KBlixt/subcleaner), extended with multi-format support, a full GUI, batch processing, embedded subtitle scanning, MKVToolNix integration, and an in-app regex profile editor.
+Based on the detection engine from [KBlixt/subcleaner](https://github.com/KBlixt/subcleaner), extended with multi-format support, a full GUI, batch processing, embedded subtitle scanning, MKVToolNix integration, MP4 remuxing, and an in-app regex profile editor.
+
+---
+
+## What's New
+
+### v0.5.0 — MP4 Remux Update
+- **MP4 and M4V remuxing** — Clean & Remux now works on MP4 and M4V files using ffmpeg, with no additional dependencies beyond what Video Scan already requires. Backup files are created as `.backup.mp4` by default.
+- **Check for Updates** — opt-in update check button in the status bar. Compares the current version against the latest GitHub release tag and opens the releases page in your browser if an update is available. Never runs automatically.
+- **Semantic versioning** — version numbers now follow standard `v0.x.0` format for clear, predictable release tracking.
+- **pysubs2 added to requirements** — explicitly listed as a required dependency.
+
+### v0.4.0 — MKVToolNix Update
+- **MKV Clean & Remux** — extract, clean, and rebuild MKV files with cleaned subtitle tracks replacing the originals, using mkvmerge. Backup files created as `.backup.mkv` by default.
+- **Per-block Keep button** — in both the Video Scan and Batch detail reports, individual flagged blocks can be marked "Keep — not an ad" to exclude them from cleaning while all other blocks in the same file are still removed.
+- **Extract & Save** — pull a subtitle track out of any video file as a standalone `.srt` or `.ass` file, cleaned, without touching the video.
+- **MKVToolNix Settings** — browse for `mkvmerge.exe` directly from within the app if it is not on your PATH. Path is saved to `settings.json` and persists across restarts.
+- **Sensitivity slider in Video Scan** — same 1–5 slider as Batch, with live re-rendering of the tree and detail pane without rescanning.
+- **HTML detail reports** — Video Scan and Batch detail panes now use colour-coded HTML reports matching the same visual language.
 
 ---
 
@@ -16,17 +34,17 @@ Subtitle files downloaded from the internet are frequently polluted with ads, di
 
 **Compared to manual editing:** Finding and removing these blocks by hand in a text editor across hundreds or thousands of files is tedious and error-prone. SubScrubber automates detection across entire libraries in seconds.
 
-**Compared to the original subcleaner:** SubScrubber extends subcleaner's detection engine with a full graphical interface, multi-format support (subcleaner only handles `.srt`), batch processing with a sensitivity slider, embedded subtitle scanning via ffprobe, MKVToolNix-based remuxing, an in-app regex editor, and is fully cross-platform compatable. Everything subcleaner does from the command line, SubScrubber does with a GUI (plus so much more).
+**Compared to the original subcleaner:** SubScrubber extends subcleaner's detection engine with a full graphical interface, multi-format support (subcleaner only handles `.srt`), batch processing with a sensitivity slider, embedded subtitle scanning via ffprobe, MKVToolNix-based remuxing, an in-app regex editor, and is fully cross-platform compatible. Everything subcleaner does from the command line, SubScrubber does with a GUI (plus so much more).
 
 **Compared to online subtitle cleaners:** Online tools require uploading your subtitle files to a third-party server. SubScrubber runs entirely on your own machine. No files ever leave your computer. No accounts. No internet connection required at any point during use.
 
 ### Key properties
 
-- **Fully local** — zero network calls, zero telemetry, zero data collection. SubScrubber never contacts any server for any reason.
+- **Fully local** — zero network calls, zero telemetry, zero data collection. SubScrubber never contacts any server for any reason. The only optional exception is the opt-in Check for Updates button.
 - **Cross-platform** — written entirely in Python and PyQt6, SubScrubber runs on Windows, macOS, and Linux without modification. The same code, the same interface, everywhere.
 - **Open source** — every line of code is visible and auditable. The detection patterns are plain text `.conf` files you can read, edit, and extend yourself.
 - **No subscription, no license, no expiry** — SubScrubber is free software. There is no paid tier, no feature gating, and no nag screens.
-- **Non-destructive by default** — SubScrubber asks for confirmation before writing any file. The MKVToolNix remux feature creates a `.backup.mkv` by default before overwriting. Dry-run mode lets you preview exactly what would be removed without touching anything.
+- **Non-destructive by default** — SubScrubber asks for confirmation before writing any file. Remux operations create a backup file by default before overwriting. Dry-run mode lets you preview exactly what would be removed without touching anything.
 - **Scriptable** — the full CLI is available for automation, cron jobs, and integration with other tools, with no GUI dependency.
 
 ---
@@ -34,14 +52,14 @@ Subtitle files downloaded from the internet are frequently polluted with ads, di
 ## Requirements
 
 - Python 3.10 or newer
-- FFmpeg (optional — only needed for Video Scan)
+- FFmpeg (optional — only needed for Video Scan and MP4 remux)
 - MKVToolNix (optional — only needed for Clean & Remux on MKV files)
 
 ```bash
 pip install -r requirements.txt
 ```
 
-`requirements.txt` installs: `PyQt6` and `pysubs`
+`requirements.txt` installs: `PyQt6` and `pysubs2`
 
 ---
 
@@ -64,7 +82,7 @@ python subscrubber.py movie.en.srt
 
 ## GUI Overview
 
-The main window has five tabs: **Review**, **Report**, **Batch**, **Video Scan**, and **Regex Editor**. The status bar at the bottom shows the current state on the left and the version number on the right.
+The main window has five tabs: **Review**, **Report**, **Batch**, **Video Scan**, and **Regex Editor**. The status bar at the bottom shows the current state on the left, a **Check for Updates** button, and the version number on the right.
 
 ---
 
@@ -117,13 +135,13 @@ For cleaning an entire media library in one pass, including libraries where each
 1. Click **Select Base Folder** and choose your top-level movies or shows folder — SubScrubber walks all subfolders recursively and counts every subtitle file it finds
 2. Click **Scan All** — all files are analysed in a background thread with a live progress bar
 3. Results appear in the file list, colour-coded red / orange / green. Each row shows `MovieFolder/subtitle.srt` so you can see which film each file belongs to at a glance
-4. Click any file in the list to see a detailed report on the right — ad blocks appear with a red left border and pink text, warnings with an orange border, timestamps in blue, and reason tags in grey below each block
+4. Click any file in the list to see a detailed report on the right — ad blocks appear with a red left border and pink text, warnings with an orange border, timestamps in blue, and reason tags in grey below each block. Click **Keep — not an ad** on any block to exclude it from cleaning
 5. Use the **Sensitivity slider** (1–5) to control how aggressively blocks are flagged. Moving it instantly re-colours all rows without rescanning:
    - **1 — Very Aggressive**: catches almost everything, higher false-positive risk
    - **2 — Aggressive**: catches most ad patterns plus borderline cases
-   - **3 — Balanced** *(default)*: matches subcleaner's original behaviour.
-   - **4 — Conservative**: only removes blocks with multiple strong matches.
-   - **5 — Very Conservative**: only the most obvious, unambiguous ads.
+   - **3 — Balanced** *(default)*: matches subcleaner's original behaviour
+   - **4 — Conservative**: only removes blocks with multiple strong matches
+   - **5 — Very Conservative**: only the most obvious, unambiguous ads
 6. Optionally check **Also remove warnings** to include blocks one level below the threshold
 7. Click **Clean & Save All** — a confirmation dialog shows exactly how many blocks from how many files will be removed, then writes everything in one shot
 8. To review a specific file in detail before cleaning, select it and click **Open in Review Tab**
@@ -145,9 +163,18 @@ Inspects subtitle tracks embedded directly inside video container files. Useful 
 6. For each flagged block in the detail pane, click **Keep — not an ad** to exclude that specific block from cleaning. It will be shown struck-through and marked KEPT, and will be skipped during remux or extraction
 7. Check the box next to any flagged track you want to clean
 8. Choose your action:
-   - **Extract & Save .srt/.ass** — extracts the track, cleans it, and saves it as a standalone subtitle file next to the video. Works with any video format. Most media players automatically detect external subtitle files. Does not modify the original video.
-   - **Clean & Remux** — cleans the selected tracks and rebuilds the MKV with the cleaned tracks replacing the originals. Requires MKVToolNix. MKV files only. Creates a `.backup.mkv` by default.
-9. Image-based subtitle formats (Blu-ray PGS, DVD VOBSUB, DVB Teletext) are detected and listed but cannot be scanned — text extraction from image subtitles requires OCR, which is not supported
+   - **Extract & Save .srt/.ass** — extracts the track, cleans it, and saves it as a standalone subtitle file next to the video. Works with any video format. Does not modify the original video. Most media players automatically detect external subtitle files.
+   - **Clean & Remux** — cleans the selected tracks and rebuilds the video file with the cleaned tracks replacing the originals. See format support below.
+9. Image-based subtitle formats (Blu-ray PGS, DVD VOBSUB, DVB Teletext) are detected and listed but cannot be scanned — text extraction requires OCR, which is not supported
+
+### Clean & Remux format support
+
+| Format | Backend | Requirement |
+|---|---|---|
+| `.mkv` | mkvmerge | MKVToolNix installed |
+| `.mp4` / `.m4v` | ffmpeg | FFmpeg already required for Video Scan |
+
+Both create a backup file by default (`.backup.mkv` or `.backup.mp4`) before overwriting the original. Uncheck **Keep backup** to skip this.
 
 ### MKVToolNix Settings
 
@@ -179,9 +206,17 @@ Click **Reload Engine** at any time to re-read all profiles from disk without sa
 
 ---
 
-## Installing FFmpeg (required for Video Scan)
+## Check for Updates
 
-FFmpeg is a free, open-source tool that SubScrubber uses to probe and extract subtitle tracks from video files. It is only needed for the Video Scan tab — everything else works without it.
+Click **Check for Updates** in the status bar at any time. SubScrubber compares the current version against the latest release tag on GitHub and shows a dialog if a newer version is available. Clicking **Open** in that dialog opens the GitHub releases page in your browser — SubScrubber never downloads or installs anything automatically.
+
+This is the only network call SubScrubber ever makes, and only when you explicitly click the button.
+
+---
+
+## Installing FFmpeg (required for Video Scan and MP4 remux)
+
+FFmpeg is a free, open-source tool that SubScrubber uses to probe and extract subtitle tracks from video files, and to remux MP4 files. It is only needed for the Video Scan tab — everything else works without it.
 
 ### Step 1 — Download FFmpeg
 
@@ -232,9 +267,9 @@ If it prints version information, FFmpeg is on your PATH and SubScrubber's Video
 
 ---
 
-## Installing MKVToolNix (required for Clean & Remux)
+## Installing MKVToolNix (required for Clean & Remux on MKV files)
 
-MKVToolNix provides `mkvmerge`, which SubScrubber uses to rebuild MKV files with cleaned subtitle tracks replacing the originals.
+MKVToolNix provides `mkvmerge`, which SubScrubber uses to rebuild MKV files with cleaned subtitle tracks replacing the originals. It is not required for MP4 remuxing.
 
 Download from **https://mkvtoolnix.download/** and run the installer. The installer adds `mkvmerge` to your PATH automatically. SubScrubber also checks the default install location (`C:\Program Files\MKVToolNix\`) so it will usually be found even if PATH was not updated.
 
@@ -303,43 +338,6 @@ Detection is driven by `.conf` regex profiles stored in `regex_profiles/default/
 
 ---
 
-## Folder Structure
-
-```
-subscrubber_gui/
-├── subscrubber.py          ← entry point (CLI + --gui flag)
-├── requirements.txt
-├── settings.json          ← auto-created, stores mkvmerge path if not on PATH
-├── README.md
-├── core/
-│   ├── __init__.py
-│   ├── subtitle.py        ← SRT / ASS / VTT parsers + SubBlock model
-│   ├── cleaner.py         ← detection engine, punishers, detectors, profile loader
-│   ├── batch.py           ← batch scan and save engine
-│   ├── ffprobe.py         ← video container probing and subtitle track extraction
-│   └── mkvtoolnix.py      ← MKVToolNix integration: extract, clean, remux
-├── gui/
-│   ├── __init__.py
-│   ├── app.py             ← main window, Review tab, Always Mark as Ad wiring
-│   ├── batch_panel.py     ← Batch tab
-│   ├── video_panel.py     ← Video Scan tab with remux and extract support
-│   ├── regex_editor.py    ← Regex Editor tab + AddPatternDialog
-│   └── colors.py          ← shared colour palette constants
-└── regex_profiles/
-    └── default/
-        ├── global.conf    ← applies to all languages
-        ├── english.conf
-        ├── no_profile.conf
-        ├── dutch.conf
-        ├── hebrew.conf
-        ├── indonesian.conf
-        ├── portuguese.conf
-        ├── spanish.conf
-        └── svenska.conf
-```
-
----
-
 ## Adding Custom Regex Profiles (manually)
 
 Create a `.conf` file in `regex_profiles/default/` — or use the **+ New Profile…** button in the Regex Editor tab. Structure:
@@ -366,4 +364,4 @@ Changes take effect immediately when saved through the Regex Editor tab. If edit
 
 ---
 
-*SubScrubber Beta 4: MKVToolNix Update — based on the detection engine from [subcleaner](https://github.com/KBlixt/subcleaner) by KBlixt (MIT licence)*
+*SubScrubber v0.5.0 — based on the detection engine from [subcleaner](https://github.com/KBlixt/subcleaner) by KBlixt (MIT licence)*
