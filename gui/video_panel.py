@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from core import (
     collect_video_files, scan_video, ffprobe_available, ffmpeg_available,
     mkvmerge_available, get_mkvmerge_path, set_mkvmerge_path,
-    extract_and_clean_track, remux_with_cleaned_tracks,
+    extract_and_clean_track, remux_with_cleaned_tracks, remux_video,
     VideoScanResult, SubtitleTrack, VIDEO_EXTENSIONS,
     CleanedTrack,
 )
@@ -331,8 +331,8 @@ class RemuxWorker(QThread):
             self.finished.emit(RemuxResult(
                 success=False, error="No tracks were successfully cleaned."))
             return
-        self.status_update.emit("Remuxing with mkvmerge…")
-        result = remux_with_cleaned_tracks(
+        self.status_update.emit("Remuxing…")
+        result = remux_video(
             self.video_path, self.all_tracks, cleaned,
             make_backup=self.make_backup,
             progress_cb=lambda msg: self.status_update.emit(msg),
@@ -489,7 +489,7 @@ class VideoDropZone(QFrame):
         icon = QLabel("🎬")
         icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         icon.setStyleSheet("font-size: 18pt;")
-        msg = QLabel("Drop video files here  ·  .mkv  .mp4  .m4v  .avi  .mov  .ts")
+        msg = QLabel("Drop video files here  ·  .mkv  .mp4  .m4v")
         msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
         msg.setStyleSheet(f"color: {FG2}; font-size: 10pt;")
         browse = QPushButton("Browse…")
@@ -641,15 +641,16 @@ class VideoScanPanel(QWidget):
         self._chk_backup.setChecked(True)
         self._chk_warnings = QCheckBox("Also remove warnings")
 
-        # "Clean & Remux" — replaces subtitle track inside MKV
+        # "Clean & Remux" — replaces subtitle tracks inside MKV or MP4/M4V
         self._btn_remux = QPushButton("Clean && Remux")
         self._btn_remux.setObjectName("btn_save")
         self._btn_remux.setEnabled(False)
         self._btn_remux.setToolTip(
-            "Cleans the selected subtitle tracks and rebuilds the MKV file with\n"
+            "Cleans the selected subtitle tracks and rebuilds the video file with\n"
             "the cleaned tracks replacing the originals.\n\n"
-            "Requires MKVToolNix (mkvmerge). MKV files only.\n"
-            "A .backup.mkv is created unless 'Keep backup' is unchecked."
+            "MKV: requires MKVToolNix (mkvmerge).\n"
+            "MP4/M4V: uses ffmpeg (already required for scanning).\n"
+            "A backup file is created unless 'Keep backup' is unchecked."
         )
 
         # "Extract & Save" — pulls subtitle out as standalone file
@@ -918,13 +919,20 @@ class VideoScanPanel(QWidget):
             1 for r, _ in self._checked_tracks.values()
             if r.path.suffix.lower() == ".mkv"
         )
+        mp4_count = sum(
+            1 for r, _ in self._checked_tracks.values()
+            if r.path.suffix.lower() in (".mp4", ".m4v")
+        )
+        remuxable = mkv_count + mp4_count
         self._lbl_selected.setText(
             f"{n} track(s) selected  ·  "
-            f"{mkv_count} MKV (can remux)  ·  "
-            f"{n - mkv_count} other (extract only)"
+            f"{mkv_count} MKV  ·  {mp4_count} MP4  ·  "
+            f"{n - remuxable} other (extract only)"
         )
         self._btn_extract.setEnabled(ffmpeg_available() and n > 0)
-        self._btn_remux.setEnabled(mkvmerge_available() and mkv_count > 0)
+        # MKV needs mkvmerge; MP4 only needs ffmpeg (already required)
+        can_remux = (mkv_count > 0 and mkvmerge_available()) or                     (mp4_count > 0 and ffmpeg_available())
+        self._btn_remux.setEnabled(can_remux)
 
     # ── Detail pane ───────────────────────────────────────────────────
 
@@ -1003,25 +1011,31 @@ class VideoScanPanel(QWidget):
             return
 
         by_video: Dict[Path, tuple] = {}
+        skipped = []
         for result, track in self._checked_tracks.values():
-            if result.path.suffix.lower() != ".mkv":
+            suffix = result.path.suffix.lower()
+            if suffix == ".mkv" and not mkvmerge_available():
+                skipped.append(f"{result.path.name} (MKV — mkvmerge not found)")
+                continue
+            if suffix not in (".mkv", ".mp4", ".m4v"):
+                skipped.append(f"{result.path.name} (unsupported format: {suffix})")
                 continue
             if result.path not in by_video:
                 by_video[result.path] = (result, [])
             by_video[result.path][1].append(track)
 
-        if not by_video:
-            QMessageBox.warning(self, "No MKV files",
-                                "Clean & Remux only supports MKV files.")
+        if skipped and not by_video:
+            QMessageBox.warning(self, "Nothing to remux",
+                                "No supported files selected.\n\n" + "\n".join(skipped))
             return
 
         track_count = sum(len(tracks) for _, tracks in by_video.values())
-        backup_note = ("A .backup.mkv will be created for each video."
+        backup_note = ("A backup file will be created for each video."
                        if self._chk_backup.isChecked()
                        else "The original file will be OVERWRITTEN with no backup.")
         answer = QMessageBox.question(
             self, "Confirm Clean & Remux",
-            f"Clean and remux {track_count} track(s) across {len(by_video)} MKV file(s).\n\n"
+            f"Clean and remux {track_count} track(s) across {len(by_video)} video file(s).\n\n"
             f"{backup_note}\n\nContinue?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )

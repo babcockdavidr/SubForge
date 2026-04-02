@@ -294,6 +294,22 @@ class AnalyzeWorker(QThread):
 
 
 # ---------------------------------------------------------------------------
+# Update check worker
+# ---------------------------------------------------------------------------
+class UpdateWorker(QThread):
+    result_ready = pyqtSignal(str, str)   # tag, release_name
+    error        = pyqtSignal(str)
+
+    def run(self):
+        from core.updater import fetch_latest_release
+        tag, name, err = fetch_latest_release()
+        if err:
+            self.error.emit(err)
+        else:
+            self.result_ready.emit(tag, name)
+
+
+# ---------------------------------------------------------------------------
 # Block row widget (used inside the review list)
 # ---------------------------------------------------------------------------
 class BlockRow(QListWidgetItem):
@@ -431,8 +447,15 @@ class MainWindow(QMainWindow):
         self._status = QStatusBar()
         self.setStatusBar(self._status)
         self._status.showMessage("Ready — drop subtitle files to begin")
-        self._version_label = QLabel("Beta 4 - MKVToolNix Update")
+        self._version_label = QLabel("v0.5.0")
         self._version_label.setStyleSheet(f"color: {FG2}; font-size: 9pt; padding-right: 6px;")
+        self._btn_check_updates = QPushButton("Check for Updates")
+        self._btn_check_updates.setStyleSheet(
+            f"font-size: 9pt; padding: 1px 8px; color: {FG2};"
+            f"border: 1px solid {BORDER}; border-radius: 3px; background: transparent;"
+        )
+        self._btn_check_updates.clicked.connect(self._check_for_updates)
+        self._status.addPermanentWidget(self._btn_check_updates)
         self._status.addPermanentWidget(self._version_label)
 
         # Central layout
@@ -941,6 +964,60 @@ class MainWindow(QMainWindow):
             self._refresh_stats()
             self._update_report()
             self._status.showMessage("Engine reloaded — file re-analysed with new patterns.")
+
+    # ── Update check ─────────────────────────────────────────────────────────
+
+    def _check_for_updates(self):
+        from core.updater import CURRENT_VERSION, RELEASES_URL, is_newer
+        self._btn_check_updates.setEnabled(False)
+        self._btn_check_updates.setText("Checking...")
+        self._status.showMessage("Checking for updates...")
+
+        self._update_worker = UpdateWorker()
+        self._update_worker.result_ready.connect(self._on_update_result)
+        self._update_worker.error.connect(self._on_update_error)
+        self._update_worker.start()
+
+    def _on_update_result(self, tag: str, name: str):
+        from core.updater import CURRENT_VERSION, RELEASES_URL, is_newer
+        self._btn_check_updates.setEnabled(True)
+        self._btn_check_updates.setText("Check for Updates")
+
+        if is_newer(tag, CURRENT_VERSION):
+            msg = (
+                "A new version of SubScrubber is available.\n\n"
+                f"Current version:  {CURRENT_VERSION}\n"
+                f"Latest version:   {tag}  ({name})\n\n"
+                "Visit the releases page to download the update."
+            )
+            answer = QMessageBox.information(
+                self,
+                "Update Available",
+                msg,
+                QMessageBox.StandardButton.Open | QMessageBox.StandardButton.Close,
+            )
+            if answer == QMessageBox.StandardButton.Open:
+                import webbrowser
+                webbrowser.open(RELEASES_URL)
+            self._status.showMessage(f"Update available: {tag}")
+        else:
+            QMessageBox.information(
+                self,
+                "Up to Date",
+                f"You are running the latest version of SubScrubber ({CURRENT_VERSION}).",
+            )
+            self._status.showMessage("SubScrubber is up to date.")
+
+    def _on_update_error(self, msg: str):
+        self._btn_check_updates.setEnabled(True)
+        self._btn_check_updates.setText("Check for Updates")
+        err_msg = (
+            f"Could not check for updates.\n\n{msg}\n\n"
+            "Check your internet connection or visit:\n"
+            "https://github.com/babcockdavidr/SubScrubber-GUI/releases"
+        )
+        QMessageBox.warning(self, "Update Check Failed", err_msg)
+        self._status.showMessage("Update check failed.")
 
     # ── Report tab ────────────────────────────────────────────────────────
 
