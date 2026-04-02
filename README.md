@@ -91,7 +91,7 @@ The main window has four tabs: **Single File**, **Batch**, **Video Scan**, and *
 
 For loading, inspecting, and cleaning individual subtitle files.
 
-![Single File Tab](screenshots/single_file_tab.png)
+![Single File Tab](images/Single_Screenshot.png)
 
 **Workflow:**
 1. Drop one or more subtitle files onto the drop zone, or use **Browse** / **Open Folder**
@@ -133,7 +133,7 @@ The **Always Mark as Ad…** button teaches SubScrubber to recognise a pattern p
 
 For cleaning an entire media library in one pass, including libraries where each movie or show lives in its own subfolder.
 
-![Batch Tab](screenshots/batch_tab.png)
+![Batch Tab](images/Batch_Screenshot.png)
 
 **Workflow:**
 1. Click **Select Base Folder** and choose your top-level movies or shows folder — SubScrubber walks all subfolders recursively and counts every subtitle file it finds
@@ -156,7 +156,9 @@ For cleaning an entire media library in one pass, including libraries where each
 
 Inspects subtitle tracks embedded directly inside video container files. Useful for checking and cleaning the subtitles built into MKV and MP4 files without needing to extract them manually first.
 
-![Video Scan Tab](screenshots/video_scan_tab.png)
+![Video Scan — No Dependencies](images/Video_Scan_No_Dependencies.png)
+
+![Video Scan Tab](images/Video_Scan_Screenshot.png)
 
 **Requires FFmpeg** installed and available on your system PATH. If FFmpeg is missing, a notice appears at the top of the tab. See the FFmpeg installation section below.
 
@@ -191,8 +193,6 @@ If `mkvmerge` is not on your system PATH, click **Settings** in the Video Scan t
 ## Regex Editor Tab
 
 A full in-app editor for the regex pattern profiles that drive detection. Changes are saved to disk and applied immediately without restarting.
-
-![Regex Editor Tab](screenshots/regex_editor_tab.png)
 
 **Left panel — profile list:**
 Each `.conf` file in `regex_profiles/default/` appears here with its language scope. Click one to load it into the editor.
