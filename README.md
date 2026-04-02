@@ -36,7 +36,7 @@ Subtitle files downloaded from the internet are frequently polluted with ads, di
 
 **Compared to the original subcleaner:** SubScrubber extends subcleaner's detection engine with a full graphical interface, multi-format support (subcleaner only handles `.srt`), batch processing with a sensitivity slider, embedded subtitle scanning via ffprobe, MKVToolNix-based remuxing, an in-app regex editor, and is fully cross-platform compatible. Everything subcleaner does from the command line, SubScrubber does with a GUI (plus so much more).
 
-**Compared to online subtitle cleaners:** Online tools require uploading your subtitle files to a third-party server. SubScrubber runs entirely on your own machine. No files ever leave your computer. No accounts. No internet connection required at any point during use.
+**Compared to online subtitle cleaners:** Online tools require uploading your subtitle files to a third-party server. SubScrubber runs entirely on your own machine. No files ever leave your computer. No accounts. No internet connection required at any point during use. No ads. To this author's knowledge, there are no online subtitle cleaners that support recursive folder search uploads, additional filetypes beyond `.srt`, and cleaning embedded subtitles, all of which SubScrubber excels at.
 
 ### Key properties
 
