@@ -27,16 +27,17 @@ from core import (
     VideoScanResult, SubtitleTrack, VIDEO_EXTENSIONS,
     CleanedTrack, apply_cleaning_options,
 )
-from gui.settings_dialog import load_cleaning_options
+from gui.settings_dialog import load_cleaning_options, load_default_sensitivity
+from gui.strings import STRINGS
 from core import block_will_be_removed
 from .colors import BG, BG2, BG3, BORDER, FG, FG2, ACCENT, RED, ORANGE, GREEN, YELLOW
 
 THRESHOLD_LABELS = {
-    1: "Very Aggressive",
-    2: "Aggressive",
-    3: "Balanced (default)",
-    4: "Conservative — recommended for TV",
-    5: "Very Conservative — recommended for Movies",
+    1: STRINGS["thresh_1"],
+    2: STRINGS["thresh_2"],
+    3: STRINGS["thresh_3"],
+    4: STRINGS["thresh_4"],
+    5: STRINGS["thresh_5"],
 }
 
 STATUS_COLORS = {
@@ -380,7 +381,7 @@ class RemuxProgressDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
         layout.setContentsMargins(16, 16, 16, 16)
-        self._lbl = QLabel("Starting…")
+        self._lbl = QLabel(STRINGS["video_starting"])
         self._lbl.setWordWrap(True)
         self._bar = QProgressBar()
         self._bar.setRange(0, 0)
@@ -445,7 +446,7 @@ class VideoSettingsDialog(QDialog):
         current = get_mkvmerge_path()
         if current:
             self._path_input.setText(current)
-        btn_browse = QPushButton("Browse…")
+        btn_browse = QPushButton(STRINGS["sf_browse"])
         btn_browse.clicked.connect(self._browse)
         path_row.addWidget(self._path_input, stretch=1)
         path_row.addWidget(btn_browse)
@@ -514,7 +515,7 @@ class VideoDropZone(QFrame):
         icon = QLabel("🎬")
         icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         icon.setStyleSheet("font-size: 18pt;")
-        msg = QLabel("Drop video files here  ·  .mkv  .mp4  .m4v")
+        msg = QLabel(STRINGS["video_drop_label"])
         msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
         msg.setStyleSheet(f"color: {FG2}; font-size: 10pt;")
         browse = QPushButton("Browse…")
@@ -558,7 +559,7 @@ class VideoScanPanel(QWidget):
         self._results:  List[VideoScanResult] = []
         self._worker:   Optional[VideoScanWorker] = None
         self._queued:   List[Path] = []
-        self._threshold: int = 3
+        self._threshold: int = load_default_sensitivity()
         self._checked_tracks: Dict = {}
         self._current_result: Optional[VideoScanResult] = None
         self._current_track:  Optional[SubtitleTrack]   = None
@@ -589,13 +590,13 @@ class VideoScanPanel(QWidget):
 
         # ── Top controls ──────────────────────────────────────────────
         ctrl = QHBoxLayout()
-        self._btn_add_folder = QPushButton("Add Folder…")
-        self._btn_clear      = QPushButton("Clear")
-        self._btn_scan       = QPushButton("Scan Videos")
+        self._btn_add_folder = QPushButton(STRINGS["video_btn_add_folder"])
+        self._btn_clear      = QPushButton(STRINGS["video_btn_clear"])
+        self._btn_scan       = QPushButton(STRINGS["video_btn_scan"])
         self._btn_scan.setObjectName("btn_clean_all")
         self._btn_scan.setEnabled(False)
 
-        self._lbl_folder = QLabel("No folder selected")
+        self._lbl_folder = QLabel(STRINGS["video_no_folder"])
         self._lbl_folder.setStyleSheet(f"color: {FG2}; font-size: 10pt;")
 
         ctrl.addWidget(self._btn_add_folder)
@@ -610,16 +611,16 @@ class VideoScanPanel(QWidget):
         )
         tl = QHBoxLayout(thresh_frame)
         tl.setContentsMargins(12, 6, 12, 6)
-        lbl_s = QLabel("Sensitivity:")
+        lbl_s = QLabel(STRINGS["sens_label"])
         lbl_s.setStyleSheet(f"color: {FG}; font-weight: bold;")
-        lbl_agg = QLabel("More aggressive")
+        lbl_agg = QLabel(STRINGS["sens_more_aggressive"])
         lbl_agg.setStyleSheet(f"color: {RED}; font-size: 9pt;")
-        lbl_con = QLabel("More conservative")
+        lbl_con = QLabel(STRINGS["sens_more_conservative"])
         lbl_con.setStyleSheet(f"color: {GREEN}; font-size: 9pt;")
         self._slider = QSlider(Qt.Orientation.Horizontal)
         self._slider.setMinimum(1)
         self._slider.setMaximum(5)
-        self._slider.setValue(3)
+        self._slider.setValue(load_default_sensitivity())
         self._slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self._slider.setTickInterval(1)
         self._slider.setFixedWidth(180)
@@ -636,7 +637,7 @@ class VideoScanPanel(QWidget):
         self._progress = QProgressBar()
         self._progress.setVisible(False)
         self._progress.setMaximumHeight(6)
-        self._lbl_status = QLabel("Drop video files or add a folder to begin.")
+        self._lbl_status = QLabel(STRINGS["video_status_begin"])
         self._lbl_status.setObjectName("file_status")
 
         # ── Drop zone ─────────────────────────────────────────────────
@@ -651,7 +652,7 @@ class VideoScanPanel(QWidget):
         ll.setContentsMargins(0, 0, 0, 0)
         ll.setSpacing(4)
 
-        lbl_tree = QLabel("VIDEO FILES & TRACKS")
+        lbl_tree = QLabel(STRINGS["video_lbl_files"])
         lbl_tree.setObjectName("section_label")
 
         self._tree = QTreeWidget()
@@ -659,17 +660,17 @@ class VideoScanPanel(QWidget):
         self._tree.setFont(QFont("Consolas", 11))
         self._tree.setIndentation(16)
 
-        self._lbl_selected = QLabel("Check boxes on flagged tracks to select for cleaning")
+        self._lbl_selected = QLabel(STRINGS["video_lbl_selected"])
         self._lbl_selected.setStyleSheet(f"color: {FG2}; font-size: 9pt;")
         self._lbl_selected.setWordWrap(True)
 
         remux_bar = QHBoxLayout()
-        self._chk_backup   = QCheckBox("Keep backup")
+        self._chk_backup   = QCheckBox(STRINGS["video_chk_backup"])
         self._chk_backup.setChecked(True)
-        self._chk_warnings = QCheckBox("Also remove warnings")
+        self._chk_warnings = QCheckBox(STRINGS["video_chk_warnings"])
 
         # "Clean & Remux" — replaces subtitle tracks inside MKV or MP4/M4V
-        self._btn_remux = QPushButton("Clean && Remux")
+        self._btn_remux = QPushButton(STRINGS["video_btn_remux"])
         self._btn_remux.setObjectName("btn_save")
         self._btn_remux.setEnabled(False)
         self._btn_remux.setToolTip(
@@ -681,7 +682,7 @@ class VideoScanPanel(QWidget):
         )
 
         # "Extract & Save" — pulls subtitle out as standalone file
-        self._btn_extract = QPushButton("Extract && Save .srt/.ass")
+        self._btn_extract = QPushButton(STRINGS["video_btn_extract"])
         self._btn_extract.setObjectName("btn_keep")
         self._btn_extract.setEnabled(False)
         self._btn_extract.setToolTip(
@@ -707,7 +708,7 @@ class VideoScanPanel(QWidget):
         rl = QVBoxLayout(right)
         rl.setContentsMargins(0, 0, 0, 0)
         rl.setSpacing(4)
-        lbl_detail = QLabel("SCAN DETAIL")
+        lbl_detail = QLabel(STRINGS["video_lbl_detail"])
         lbl_detail.setObjectName("section_label")
         self._detail_text = QTextBrowser()
         self._detail_text.setFont(QFont("Consolas", 11))
@@ -750,17 +751,10 @@ class VideoScanPanel(QWidget):
         if not ffprobe_available(): missing_ff.append("ffprobe")
         if not ffmpeg_available():  missing_ff.append("ffmpeg")
         if missing_ff:
-            self._ffmpeg_notice.setText(
-                f"⚠  {' and '.join(missing_ff)} not found on PATH. "
-                f"Install FFmpeg (https://ffmpeg.org/download.html)."
-            )
+            self._ffmpeg_notice.setText(STRINGS["video_ffmpeg_notice"])
             self._ffmpeg_notice.setVisible(True)
         if not mkvmerge_available():
-            self._mkv_notice.setText(
-                "⚠  mkvmerge not found — Clean & Remux is unavailable for MKV files. "
-                "MP4 and M4V files can still be remuxed using FFmpeg. "
-                "Install MKVToolNix or set the path via ⚙ Settings to enable MKV remux."
-            )
+            self._mkv_notice.setText(STRINGS["video_mkv_notice"])
             self._mkv_notice.setVisible(True)
 
     def _open_settings(self):
@@ -786,7 +780,7 @@ class VideoScanPanel(QWidget):
         existing = set(self._queued)
         new = [p for p in paths if p not in existing]
         self._queued.extend(new)
-        self._lbl_status.setText(f"{len(self._queued)} video file(s) queued.")
+        self._lbl_status.setText(STRINGS["video_files_queued"].format(n=len(self._queued)))
         self._btn_scan.setEnabled(bool(self._queued))
 
     def _clear(self):
@@ -799,9 +793,9 @@ class VideoScanPanel(QWidget):
         self._detail_text.clear()
         self._btn_remux.setEnabled(False)
         self._btn_extract.setEnabled(False)
-        self._lbl_selected.setText("Check boxes on flagged tracks to select for cleaning")
-        self._lbl_folder.setText("No folder selected")
-        self._lbl_status.setText("Drop video files or add a folder to begin.")
+        self._lbl_selected.setText(STRINGS["video_lbl_selected"])
+        self._lbl_folder.setText(STRINGS["video_no_folder"])
+        self._lbl_status.setText(STRINGS["video_status_begin"])
         self._btn_scan.setEnabled(False)
 
     # ── Threshold ─────────────────────────────────────────────────────
@@ -873,8 +867,7 @@ class VideoScanPanel(QWidget):
         if not self._queued:
             return
         if not ffprobe_available():
-            QMessageBox.warning(self, "ffprobe not found",
-                                "Install FFmpeg and ensure it is on your PATH.")
+            QMessageBox.warning(self, STRINGS["dlg_ffprobe_title"], STRINGS["dlg_ffprobe_msg"])
             return
         self._tree.clear()
         self._results.clear()
@@ -892,7 +885,7 @@ class VideoScanPanel(QWidget):
 
     def _on_progress(self, current, total, name):
         self._progress.setValue(current)
-        self._lbl_status.setText(f"Scanning {current}/{total}: {name}")
+        self._lbl_status.setText(STRINGS["video_status_scanning"].format(current=current, total=total, name=name))
 
     def _on_scan_done(self, results):
         self._results = results
@@ -1067,7 +1060,7 @@ class VideoScanPanel(QWidget):
                 saved += 1
 
         if errors:
-            QMessageBox.warning(self, "Some extractions failed",
+            QMessageBox.warning(self, STRINGS["dlg_extractions_failed"],
                                 f"{saved} succeeded.\n\n" + "\n".join(errors))
         else:
             QMessageBox.information(
@@ -1082,8 +1075,7 @@ class VideoScanPanel(QWidget):
         if not self._checked_tracks:
             return
         if not mkvmerge_available():
-            QMessageBox.warning(self, "mkvmerge not found",
-                                "Set the mkvmerge path via Settings in the toolbar.")
+            QMessageBox.warning(self, STRINGS["dlg_mkvmerge_missing"], STRINGS["dlg_mkvmerge_missing_msg"])
             return
 
         by_video: Dict[Path, tuple] = {}

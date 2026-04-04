@@ -19,7 +19,8 @@ from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QListWidget, QListWidgetItem, QTextEdit, QTextBrowser, QProgressBar,
+    QTableWidget, QTableWidgetItem, QHeaderView,
+    QTextEdit, QTextBrowser, QProgressBar,
     QFileDialog, QMessageBox, QCheckBox, QAbstractItemView,
     QSplitter, QSlider, QFrame, QSizePolicy,
 )
@@ -29,7 +30,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core import collect_files, run_batch, save_batch, BatchResult, FileResult, SUPPORTED_EXTENSIONS
 from core import apply_cleaning_options, block_will_be_removed
-from gui.settings_dialog import load_cleaning_options
+from gui.settings_dialog import load_cleaning_options, load_default_sensitivity
+from gui.strings import STRINGS
 from core.subtitle import ParsedSubtitle
 from .colors import BG2, BG3, BORDER, FG, FG2, ACCENT, RED, ORANGE, GREEN, YELLOW
 
@@ -42,11 +44,11 @@ from .colors import BG2, BG3, BORDER, FG, FG2, ACCENT, RED, ORANGE, GREEN, YELLO
 # Lower = more aggressive (catches more, higher false-positive risk)
 # Higher = more conservative (only removes obvious ads)
 THRESHOLD_LABELS = {
-    1: "Very Aggressive  (rm ≥ 1)",
-    2: "Aggressive       (rm ≥ 2)",
-    3: "Balanced         (rm ≥ 3)  ← default",
-    4: "Conservative     (rm ≥ 4)",
-    5: "Very Conservative(rm ≥ 5)",
+    1: STRINGS["thresh_1"],
+    2: STRINGS["thresh_2"],
+    3: STRINGS["thresh_3"],
+    4: STRINGS["thresh_4"],
+    5: STRINGS["thresh_5"],
 }
 
 
@@ -85,52 +87,20 @@ class BatchWorker(QThread):
 # Result row
 # ---------------------------------------------------------------------------
 
-class ResultRow(QListWidgetItem):
-    def __init__(self, fr: FileResult, threshold: int = 3):
-        super().__init__()
-        self.file_result = fr
-        self.refresh(threshold)
 
-    def refresh(self, threshold: int = 3):
-        fr = self.file_result
-        if fr.error:
-            self.setText(f"[ ERROR  ]  {fr.path.name}")
-            self.setForeground(QColor("#888888"))
-            return
 
-        if fr.subtitle:
-            ads, warns = _classify(fr.subtitle, threshold)
-            cleaning_opts = load_cleaning_options()
-            opts_count = sum(
-                1 for b in fr.subtitle.blocks
-                if b.regex_matches < threshold
-                and block_will_be_removed(b.content, cleaning_opts)
-            ) if cleaning_opts.any_enabled() else 0
-        else:
-            ads, warns = fr.ad_count, fr.warning_count
-            opts_count = 0
 
-        # Show relative path (parent folder / filename) so user knows the movie
+# ---------------------------------------------------------------------------
+# Numeric sort helper
+# ---------------------------------------------------------------------------
+
+class NumericTableItem(QTableWidgetItem):
+    """QTableWidgetItem that sorts numerically rather than lexicographically."""
+    def __lt__(self, other):
         try:
-            display = str(fr.path.parent.name) + "/" + fr.path.name
-        except Exception:
-            display = fr.path.name
-
-        if ads > 0 and opts_count > 0:
-            self.setText(f"[{ads:>2} ads +{opts_count:>3} opts]  {display}")
-            self.setForeground(QColor(RED))
-        elif ads > 0:
-            self.setText(f"[{ads:>2} ads  ]  {display}")
-            self.setForeground(QColor(RED))
-        elif warns > 0:
-            self.setText(f"[{warns:>2} warns]  {display}")
-            self.setForeground(QColor(ORANGE))
-        elif opts_count > 0:
-            self.setText(f"[{opts_count:>3} opts  ]  {display}")
-            self.setForeground(QColor(ACCENT))
-        else:
-            self.setText(f"[  clean  ]  {display}")
-            self.setForeground(QColor(GREEN))
+            return int(self.text() or 0) < int(other.text() or 0)
+        except (ValueError, AttributeError):
+            return super().__lt__(other)
 
 
 # ---------------------------------------------------------------------------
@@ -147,7 +117,7 @@ class BatchPanel(QWidget):
         self._worker: Optional[BatchWorker] = None
         self._all_paths: List[Path] = []
         self._root_folder: Optional[Path] = None
-        self._threshold: int = 3
+        self._threshold: int = load_default_sensitivity()
         self._build_ui()
 
     def _build_ui(self):
@@ -158,14 +128,14 @@ class BatchPanel(QWidget):
         # ── Folder selection row ──────────────────────────────────────────
         folder_row = QHBoxLayout()
 
-        self._lbl_folder = QLabel("No folder selected")
+        self._lbl_folder = QLabel(STRINGS["batch_no_folder"])
         self._lbl_folder.setStyleSheet(f"color: {FG2}; font-size: 10pt;")
         self._lbl_folder.setSizePolicy(QSizePolicy.Policy.Expanding,
                                        QSizePolicy.Policy.Preferred)
 
-        self._btn_folder = QPushButton("Select Base Folder…")
+        self._btn_folder = QPushButton(STRINGS["batch_btn_select_folder"])
         self._btn_folder.setObjectName("btn_clean_all")
-        self._btn_clear = QPushButton("Clear")
+        self._btn_clear = QPushButton(STRINGS["batch_btn_clear"])
 
         folder_row.addWidget(self._btn_folder)
         folder_row.addWidget(self._lbl_folder, stretch=1)
@@ -179,13 +149,13 @@ class BatchPanel(QWidget):
         thresh_layout = QHBoxLayout(thresh_frame)
         thresh_layout.setContentsMargins(12, 8, 12, 8)
 
-        thresh_title = QLabel("Sensitivity:")
+        thresh_title = QLabel(STRINGS["sens_label"])
         thresh_title.setStyleSheet(f"color: {FG}; font-size: 10pt; font-weight: bold;")
 
         self._slider = QSlider(Qt.Orientation.Horizontal)
         self._slider.setMinimum(1)
         self._slider.setMaximum(5)
-        self._slider.setValue(3)
+        self._slider.setValue(load_default_sensitivity())
         self._slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self._slider.setTickInterval(1)
         self._slider.setFixedWidth(200)
@@ -194,9 +164,9 @@ class BatchPanel(QWidget):
         self._lbl_threshold.setStyleSheet(f"color: {YELLOW}; font-size: 9pt;")
 
         # Endpoint labels
-        lbl_aggressive = QLabel("More aggressive")
+        lbl_aggressive = QLabel(STRINGS["sens_more_aggressive"])
         lbl_aggressive.setStyleSheet(f"color: {RED}; font-size: 8pt;")
-        lbl_conservative = QLabel("More conservative")
+        lbl_conservative = QLabel(STRINGS["sens_more_conservative"])
         lbl_conservative.setStyleSheet(f"color: {GREEN}; font-size: 8pt;")
 
         thresh_layout.addWidget(thresh_title)
@@ -209,14 +179,14 @@ class BatchPanel(QWidget):
         # ── Action row ────────────────────────────────────────────────────
         action_row = QHBoxLayout()
 
-        self._chk_warnings = QCheckBox("Also remove warnings (one level below threshold)")
+        self._chk_warnings = QCheckBox(STRINGS["batch_chk_warnings"])
         self._chk_warnings.setStyleSheet(f"color: {FG2}; font-size: 10pt;")
 
-        self._btn_scan = QPushButton("Scan All")
+        self._btn_scan = QPushButton(STRINGS["batch_btn_scan_all"])
         self._btn_scan.setObjectName("btn_clean_all")
         self._btn_scan.setEnabled(False)
 
-        self._btn_save = QPushButton("Clean && Save All")
+        self._btn_save = QPushButton(STRINGS["batch_btn_clean_save_all"])
         self._btn_save.setObjectName("btn_save")
         self._btn_save.setEnabled(False)
 
@@ -230,7 +200,7 @@ class BatchPanel(QWidget):
         self._progress.setVisible(False)
         self._progress.setMaximumHeight(6)
 
-        self._lbl_status = QLabel("Select a movies folder to begin.")
+        self._lbl_status = QLabel(STRINGS["batch_status_begin"])
         self._lbl_status.setObjectName("file_status")
 
         # ── Splitter: file list | detail ──────────────────────────────────
@@ -242,18 +212,42 @@ class BatchPanel(QWidget):
         ll.setContentsMargins(0, 0, 0, 0)
         ll.setSpacing(4)
 
-        lbl_files = QLabel("SCANNED FILES")
+        lbl_files = QLabel(STRINGS["batch_lbl_scanned"])
         lbl_files.setObjectName("section_label")
 
-        self._result_list = QListWidget()
+        self._result_list = QTableWidget()
+        self._result_list.setColumnCount(4)
+        self._result_list.setHorizontalHeaderLabels(["File", "Ads", "Opts", "Warns"])
         self._result_list.setFont(QFont("Consolas", 11))
         self._result_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self._result_list.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self._result_list.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self._result_list.setShowGrid(False)
+        self._result_list.verticalHeader().setVisible(False)
+        self._result_list.horizontalHeader().setSortIndicatorShown(True)
+        self._result_list.horizontalHeader().setSectionsClickable(True)
+        self._result_list.setSortingEnabled(True)
+        self._result_list.horizontalHeader().setStretchLastSection(False)
+        self._result_list.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        self._result_list.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
+        self._result_list.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
+        self._result_list.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
+        self._result_list.setColumnWidth(1, 48)
+        self._result_list.setColumnWidth(2, 48)
+        self._result_list.setColumnWidth(3, 56)
+        self._result_list.setStyleSheet(
+            f'QTableWidget {{ background: {BG2}; border: 1px solid {BORDER}; border-radius: 4px; }}'
+            f'QTableWidget::item {{ padding: 4px 8px; border-bottom: 1px solid {BORDER}; }}'
+            f'QTableWidget::item:selected {{ background: #2a3f5f; color: #ffffff; }}'
+            f'QHeaderView::section {{ background: {BG2}; color: {FG2}; border: none; '
+            f'border-bottom: 1px solid {BORDER}; padding: 4px 8px; font-size: 9pt; }}'
+        )
 
-        self._btn_open_in_review = QPushButton("Open in Single File Tab")
+        self._btn_open_in_review = QPushButton(STRINGS["batch_btn_open_review"])
         self._btn_open_in_review.setEnabled(False)
-        self._btn_full_report = QPushButton("Show Full Report")
+        self._btn_full_report = QPushButton(STRINGS["batch_btn_full_report"])
         self._btn_full_report.setEnabled(False)
-        self._btn_full_report.setToolTip("Restore the full batch summary report.")
+        self._btn_full_report.setToolTip(STRINGS["batch_tip_full_report"])
 
         file_btns = QHBoxLayout()
         file_btns.addWidget(self._btn_open_in_review)
@@ -269,7 +263,7 @@ class BatchPanel(QWidget):
         rl.setContentsMargins(0, 0, 0, 0)
         rl.setSpacing(4)
 
-        lbl_report = QLabel("BATCH REPORT")
+        lbl_report = QLabel(STRINGS["batch_lbl_report"])
         lbl_report.setObjectName("section_label")
 
         self._report_text = QTextBrowser()
@@ -301,10 +295,78 @@ class BatchPanel(QWidget):
         self._btn_scan.clicked.connect(self._scan)
         self._btn_save.clicked.connect(self._save_all)
         self._slider.valueChanged.connect(self._on_threshold_changed)
-        self._result_list.currentRowChanged.connect(self._on_row_selected)
+        self._result_list.itemSelectionChanged.connect(self._on_selection_changed)
         self._btn_open_in_review.clicked.connect(self._open_in_review)
 
         self._btn_full_report.clicked.connect(self._show_full_report)
+
+    # ── Table helpers ────────────────────────────────────────────────────
+
+    def _counts_for(self, fr, threshold):
+        if fr.subtitle:
+            ads, warns = _classify(fr.subtitle, threshold)
+            cleaning_opts = load_cleaning_options()
+            opts = sum(
+                1 for b in fr.subtitle.blocks
+                if b.regex_matches < threshold
+                and block_will_be_removed(b.content, cleaning_opts)
+            ) if cleaning_opts.any_enabled() else 0
+        else:
+            ads, warns = fr.ad_count, fr.warning_count
+            opts = 0
+        return ads, warns, opts
+
+    def _row_color(self, ads, warns, opts):
+        if ads > 0:   return QColor(RED)
+        if warns > 0: return QColor(ORANGE)
+        if opts > 0:  return QColor(ACCENT)
+        return QColor(GREEN)
+
+    def _populate_row(self, row, fr, threshold):
+        if fr.error:
+            display = str(fr.path.parent.name) + "/" + fr.path.name
+            item = QTableWidgetItem(display)
+            item.setForeground(QColor("#888888"))
+            item.setData(Qt.ItemDataRole.UserRole, fr)
+            self._result_list.setItem(row, 0, item)
+            for col in (1, 2, 3):
+                cell = QTableWidgetItem("")
+                cell.setForeground(QColor("#888888"))
+                self._result_list.setItem(row, col, cell)
+            return
+
+        ads, warns, opts = self._counts_for(fr, threshold)
+        color = self._row_color(ads, warns, opts)
+        try:
+            display = str(fr.path.parent.name) + "/" + fr.path.name
+        except Exception:
+            display = fr.path.name
+
+        item0 = QTableWidgetItem(display)
+        item0.setForeground(color)
+        item0.setData(Qt.ItemDataRole.UserRole, fr)
+        item1 = NumericTableItem(str(ads) if ads else "")
+        item1.setForeground(color)
+        item1.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        item2 = NumericTableItem(str(opts) if opts else "")
+        item2.setForeground(color)
+        item2.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        item3 = NumericTableItem(str(warns) if warns else "")
+        item3.setForeground(color)
+        item3.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self._result_list.setItem(row, 0, item0)
+        self._result_list.setItem(row, 1, item1)
+        self._result_list.setItem(row, 2, item2)
+        self._result_list.setItem(row, 3, item3)
+
+    def _on_selection_changed(self):
+        rows = self._result_list.selectedItems()
+        if not rows:
+            self._on_row_selected(-1)
+            return
+        row = self._result_list.row(rows[0])
+        self._on_row_selected(row)
 
     # ── Folder selection ──────────────────────────────────────────────────
 
@@ -324,20 +386,21 @@ class BatchPanel(QWidget):
             )
             self._btn_scan.setEnabled(True)
         else:
-            self._lbl_status.setText("No subtitle files found in that folder.")
+            self._lbl_status.setText(STRINGS["batch_no_files"])
             self._btn_scan.setEnabled(False)
 
     def _clear(self):
         self._all_paths.clear()
         self._root_folder = None
         self._batch_result = None
-        self._result_list.clear()
+        self._result_list.setSortingEnabled(False)
+        self._result_list.setRowCount(0)
         self._report_text.clear()
         self._btn_scan.setEnabled(False)
         self._btn_save.setEnabled(False)
         self._btn_full_report.setEnabled(False)
         self._lbl_folder.setText("No folder selected")
-        self._lbl_status.setText("Select a movies folder to begin.")
+        self._lbl_status.setText(STRINGS["batch_status_begin"])
 
     # ── Threshold slider ──────────────────────────────────────────────────
 
@@ -349,16 +412,22 @@ class BatchPanel(QWidget):
             self._update_summary_counts()
             # Re-render whichever view is currently shown
             if self._current_fr is not None:
-                row = self._batch_result.results.index(self._current_fr)
-                self._on_row_selected(row)
+                sel = self._result_list.selectedItems()
+                if sel:
+                    self._on_row_selected(self._result_list.row(sel[0]))
             else:
                 self._report_text.setHtml(self._build_report())
 
     def _refresh_rows(self):
-        for i in range(self._result_list.count()):
-            item = self._result_list.item(i)
-            if isinstance(item, ResultRow):
-                item.refresh(self._threshold)
+        self._result_list.setSortingEnabled(False)
+        for row in range(self._result_list.rowCount()):
+            item = self._result_list.item(row, 0)
+            if item is None:
+                continue
+            fr = item.data(Qt.ItemDataRole.UserRole)
+            if fr is not None:
+                self._populate_row(row, fr, self._threshold)
+        self._result_list.setSortingEnabled(True)
 
     def _update_summary_counts(self):
         if not self._batch_result:
@@ -387,7 +456,8 @@ class BatchPanel(QWidget):
     def _scan(self):
         if not self._all_paths:
             return
-        self._result_list.clear()
+        self._result_list.setSortingEnabled(False)
+        self._result_list.setRowCount(0)
         self._report_text.clear()
         self._batch_result = None
         self._btn_save.setEnabled(False)
@@ -403,7 +473,7 @@ class BatchPanel(QWidget):
 
     def _on_progress(self, current: int, total: int, name: str):
         self._progress.setValue(current)
-        self._lbl_status.setText(f"Scanning {current}/{total}: {name}")
+        self._lbl_status.setText(STRINGS["batch_status_scanning"].format(current=current, total=total, name=name))
 
     def _on_scan_done(self, result: BatchResult):
         self._batch_result = result
@@ -411,9 +481,11 @@ class BatchPanel(QWidget):
         self._btn_scan.setEnabled(True)
         self._btn_full_report.setEnabled(True)
 
-        self._result_list.clear()
-        for fr in result.results:
-            self._result_list.addItem(ResultRow(fr, self._threshold))
+        self._result_list.setSortingEnabled(False)
+        self._result_list.setRowCount(len(result.results))
+        for row, fr in enumerate(result.results):
+            self._populate_row(row, fr, self._threshold)
+        self._result_list.setSortingEnabled(True)
 
         self._update_summary_counts()
         self._report_text.setHtml(self._build_report())
@@ -555,7 +627,12 @@ class BatchPanel(QWidget):
             self._btn_open_in_review.setEnabled(False)
             self._current_fr = None
             return
-        fr = self._batch_result.results[row]
+        item = self._result_list.item(row, 0)
+        if item is None:
+            self._btn_open_in_review.setEnabled(False)
+            self._current_fr = None
+            return
+        fr = item.data(Qt.ItemDataRole.UserRole)
         self._current_fr = fr
         self._btn_open_in_review.setEnabled(fr.ok)
 
@@ -713,25 +790,29 @@ class BatchPanel(QWidget):
                     for b in fr.subtitle.blocks:
                         if id(b) == block_id:
                             b._kept = not getattr(b, '_kept', False)
-                            row = self._result_list.currentRow()
-                            if row >= 0:
-                                self._on_row_selected(row)
+                            sel = self._result_list.selectedItems()
+                            if sel:
+                                self._on_row_selected(self._result_list.row(sel[0]))
                             return
 
     def _show_full_report(self):
         if self._batch_result:
             self._result_list.clearSelection()
             self._current_fr = None
+            self._btn_full_report.setEnabled(True)
             self._report_text.setHtml(self._build_report())
             self._btn_open_in_review.setEnabled(False)
 
     def _open_in_review(self):
         if not self._batch_result:
             return
-        row = self._result_list.currentRow()
-        if row < 0:
+        sel = self._result_list.selectedItems()
+        if not sel:
             return
-        fr = self._batch_result.results[row]
+        item = self._result_list.item(self._result_list.row(sel[0]), 0)
+        if item is None:
+            return
+        fr = item.data(Qt.ItemDataRole.UserRole)
         self.open_file_requested.emit(fr.path)
 
     # ── Save all ──────────────────────────────────────────────────────────
@@ -759,16 +840,13 @@ class BatchPanel(QWidget):
                 to_clean.append((r, remove))
 
         if not to_clean:
-            QMessageBox.information(self, "Nothing to clean",
-                                    "No files have issues at the current threshold.")
+            QMessageBox.information(self, STRINGS["dlg_nothing_to_clean"], STRINGS["dlg_nothing_to_clean_msg"])
             return
 
         total_blocks = sum(len(blocks) for _, blocks in to_clean)
         answer = QMessageBox.question(
-            self, "Confirm batch clean",
-            f"Remove {total_blocks} block(s) from {len(to_clean)} file(s) and save?\n\n"
-            f"Threshold: regex_matches ≥ {t}\n"
-            f"This cannot be undone.",
+            self, STRINGS["dlg_confirm_batch"],
+            STRINGS["dlg_confirm_batch_msg"].format(blocks=total_blocks, files=len(to_clean), thresh=t),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if answer != QMessageBox.StandardButton.Yes:
@@ -780,7 +858,7 @@ class BatchPanel(QWidget):
 
         for i, (r, remove_blocks) in enumerate(to_clean):
             self._progress.setValue(i)
-            self._lbl_status.setText(f"Saving {i+1}/{len(to_clean)}: {r.path.name}")
+            self._lbl_status.setText(STRINGS["batch_saving"].format(i=i+1, total=len(to_clean), name=r.path.name))
             QApplication_processEvents()
 
             remove_ids = {id(b) for b in remove_blocks}
@@ -805,13 +883,11 @@ class BatchPanel(QWidget):
         self._progress.setVisible(False)
 
         if errors:
-            QMessageBox.warning(self, "Some saves failed", "\n".join(errors))
+            QMessageBox.warning(self, STRINGS["dlg_saves_failed"], "\n".join(errors))
         else:
             saved = len(to_clean)
-            self._lbl_status.setText(
-                f"Done — {saved} file(s) cleaned at threshold rm≥{t}.")
-            QMessageBox.information(self, "Done",
-                                    f"{saved} file(s) cleaned and saved.")
+            self._lbl_status.setText(STRINGS["batch_done_status"].format(saved=saved, thresh=t))
+            QMessageBox.information(self, STRINGS["dlg_done"], STRINGS["dlg_done_msg"].format(saved=saved))
 
         # Refresh list colours
         self._refresh_rows()
@@ -824,8 +900,7 @@ class BatchPanel(QWidget):
         self._all_paths = subtitle_paths
         if subtitle_paths:
             self._btn_scan.setEnabled(True)
-            self._lbl_status.setText(
-                f"{len(subtitle_paths)} subtitle file(s) queued.")
+            self._lbl_status.setText(STRINGS["batch_files_queued"].format(n=len(subtitle_paths)))
 
 
 def QApplication_processEvents():

@@ -31,6 +31,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from .colors import BG, BG2, BG3, BORDER, FG, FG2, ACCENT, RED, ORANGE, GREEN, YELLOW
+from .strings import STRINGS
 
 PROFILES_DIR = Path(__file__).parent.parent / "regex_profiles" / "default"
 
@@ -182,7 +183,7 @@ class AddPatternDialog(QDialog):
 
     def __init__(self, block_text: str, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Always Mark as Ad — Add Pattern")
+        self.setWindowTitle(STRINGS["addpattern_title"])
         self.setMinimumWidth(620)
         self.setMinimumHeight(420)
         self.setStyleSheet(f"""
@@ -221,7 +222,7 @@ class AddPatternDialog(QDialog):
         layout.setContentsMargins(16, 16, 16, 16)
 
         # ── Original text ──────────────────────────────────────────────
-        grp_orig = QGroupBox("Original subtitle block text")
+        grp_orig = QGroupBox(STRINGS["addpattern_grp_orig"])
         gl = QVBoxLayout(grp_orig)
         self._orig_text = QTextEdit()
         self._orig_text.setPlainText(block_text)
@@ -232,14 +233,10 @@ class AddPatternDialog(QDialog):
         layout.addWidget(grp_orig)
 
         # ── Regex input ────────────────────────────────────────────────
-        grp_regex = QGroupBox("Regex pattern to add")
+        grp_regex = QGroupBox(STRINGS["addpattern_grp_regex"])
         rl = QVBoxLayout(grp_regex)
 
-        hint = QLabel(
-            "The pattern below was auto-generated from the block text. "
-            "Edit it to be as specific or as broad as you need. "
-            "All patterns are case-insensitive."
-        )
+        hint = QLabel(STRINGS["addpattern_hint"])
         hint.setWordWrap(True)
         hint.setStyleSheet(f"color: {FG2}; font-size: 9pt;")
 
@@ -260,7 +257,7 @@ class AddPatternDialog(QDialog):
         # ── Profile + level ────────────────────────────────────────────
         settings_row = QHBoxLayout()
 
-        grp_profile = QGroupBox("Save to profile")
+        grp_profile = QGroupBox(STRINGS["addpattern_grp_profile"])
         pl = QVBoxLayout(grp_profile)
         self._combo_profile = QComboBox()
         self._profiles: List[Path] = list_profiles()
@@ -274,10 +271,10 @@ class AddPatternDialog(QDialog):
         pl.addWidget(self._combo_profile)
         settings_row.addWidget(grp_profile, stretch=2)
 
-        grp_level = QGroupBox("Detection level")
+        grp_level = QGroupBox(STRINGS["addpattern_grp_level"])
         ll2 = QVBoxLayout(grp_level)
-        self._radio_purge = QRadioButton("PURGE — always remove (+ 3 pts)")
-        self._radio_warn  = QRadioButton("WARNING — flag for review (+ 1 pt)")
+        self._radio_purge = QRadioButton(STRINGS["addpattern_purge"])
+        self._radio_warn  = QRadioButton(STRINGS["addpattern_warn"])
         self._radio_purge.setChecked(True)
         self._btn_group = QButtonGroup()
         self._btn_group.addButton(self._radio_purge)
@@ -289,7 +286,7 @@ class AddPatternDialog(QDialog):
         layout.addLayout(settings_row)
 
         # ── Test match ─────────────────────────────────────────────────
-        self._btn_test = QPushButton("Test match against block text")
+        self._btn_test = QPushButton(STRINGS["addpattern_btn_test"])
         self._btn_test.clicked.connect(self._test_match)
         layout.addWidget(self._btn_test)
 
@@ -312,7 +309,7 @@ class AddPatternDialog(QDialog):
     def _validate_regex(self, text: str):
         try:
             re.compile(text, re.IGNORECASE)
-            self._lbl_valid.setText("✓ Valid regex")
+            self._lbl_valid.setText(STRINGS["regex_valid"])
             self._lbl_valid.setStyleSheet(f"color: {GREEN};")
         except re.error as e:
             self._lbl_valid.setText(f"✕ Invalid: {e}")
@@ -323,16 +320,13 @@ class AddPatternDialog(QDialog):
         try:
             compiled = re.compile(pattern, re.IGNORECASE)
             if compiled.search(self._block_text):
-                self._lbl_test_result.setText("✓ Pattern MATCHES the block text.")
+                self._lbl_test_result.setText(STRINGS["addpattern_match"])
                 self._lbl_test_result.setStyleSheet(f"color: {GREEN};")
             else:
-                self._lbl_test_result.setText(
-                    "⚠ Pattern does NOT match the block text.\n"
-                    "It will still be saved and applied to future files."
-                )
+                self._lbl_test_result.setText(STRINGS["addpattern_no_match"])
                 self._lbl_test_result.setStyleSheet(f"color: {ORANGE};")
         except re.error as e:
-            self._lbl_test_result.setText(f"✕ Regex error: {e}")
+            self._lbl_test_result.setText(STRINGS["addpattern_regex_error"].format(error=e))
             self._lbl_test_result.setStyleSheet(f"color: {RED};")
 
     def _save(self):
@@ -343,7 +337,7 @@ class AddPatternDialog(QDialog):
         try:
             re.compile(pattern, re.IGNORECASE)
         except re.error as e:
-            QMessageBox.critical(self, "Invalid regex", str(e))
+            QMessageBox.critical(self, STRINGS["dlg_invalid_regex"], str(e))
             return
 
         profile_path: Path = self._combo_profile.currentData()
@@ -375,7 +369,7 @@ class AddPatternDialog(QDialog):
             QMessageBox.warning(
                 self, "Reload warning",
                 f"Pattern saved but engine reload failed: {e}\n"
-                f"Restart SubScrubber to apply changes."
+                f"Restart SubForge to apply changes."
             )
 
         self._saved = True
@@ -414,11 +408,11 @@ class RegexEditorPanel(QWidget):
         # ── Top bar ───────────────────────────────────────────────────────
         top = QHBoxLayout()
         lbl = QLabel(
-            "Edit regex profiles directly. Changes are saved to disk and applied immediately."
+            STRINGS["regex_desc"]
         )
         lbl.setStyleSheet(f"color: {FG2}; font-size: 9pt;")
-        self._btn_new_profile = QPushButton("+ New Profile…")
-        self._btn_reload = QPushButton("Reload Engine")
+        self._btn_new_profile = QPushButton(STRINGS["regex_btn_new_profile"])
+        self._btn_reload = QPushButton(STRINGS["regex_btn_reload"])
         top.addWidget(lbl, stretch=1)
         top.addWidget(self._btn_new_profile)
         top.addWidget(self._btn_reload)
@@ -433,7 +427,7 @@ class RegexEditorPanel(QWidget):
         ll.setContentsMargins(0, 0, 0, 0)
         ll.setSpacing(4)
 
-        lbl_profiles = QLabel("PROFILES")
+        lbl_profiles = QLabel(STRINGS["regex_lbl_profiles"])
         lbl_profiles.setObjectName("section_label")
 
         self._profile_list = QListWidget()
@@ -450,18 +444,18 @@ class RegexEditorPanel(QWidget):
         rl.setContentsMargins(0, 0, 0, 0)
         rl.setSpacing(4)
 
-        lbl_editor = QLabel("PATTERN EDITOR")
+        lbl_editor = QLabel(STRINGS["regex_lbl_editor"])
         lbl_editor.setObjectName("section_label")
 
         self._editor = QTextEdit()
         self._editor.setFont(QFont("Consolas", 11))
-        self._editor.setPlaceholderText("Select a profile on the left to edit it…")
+        self._editor.setPlaceholderText(STRINGS["regex_placeholder"])
         self._highlighter = RegexHighlighter(self._editor.document())
 
         # Quick-add row
         add_row = QHBoxLayout()
         self._quick_key = QLineEdit()
-        self._quick_key.setPlaceholderText("key (e.g. my_purge1)")
+        self._quick_key.setPlaceholderText(STRINGS["regex_key_placeholder"])
         self._quick_key.setMaximumWidth(160)
         self._quick_key.setFont(QFont("Consolas", 11))
 
@@ -473,7 +467,7 @@ class RegexEditorPanel(QWidget):
         self._quick_section.addItems(["PURGE_REGEX", "WARNING_REGEX"])
         self._quick_section.setFixedWidth(150)
 
-        self._btn_quick_add = QPushButton("Add")
+        self._btn_quick_add = QPushButton(STRINGS["regex_btn_add"])
         self._btn_quick_add.setObjectName("btn_keep")
 
         add_row.addWidget(self._quick_section)
@@ -486,10 +480,10 @@ class RegexEditorPanel(QWidget):
         save_row = QHBoxLayout()
         self._lbl_dirty = QLabel("")
         self._lbl_dirty.setStyleSheet(f"color: {ORANGE}; font-size: 9pt;")
-        self._btn_save = QPushButton("Save Profile")
+        self._btn_save = QPushButton(STRINGS["regex_btn_save"])
         self._btn_save.setObjectName("btn_clean_all")
         self._btn_save.setEnabled(False)
-        self._btn_discard = QPushButton("Discard Changes")
+        self._btn_discard = QPushButton(STRINGS["regex_btn_discard"])
         self._btn_discard.setObjectName("btn_remove")
         self._btn_discard.setEnabled(False)
 
@@ -530,8 +524,8 @@ class RegexEditorPanel(QWidget):
     def _on_profile_selected(self, row: int):
         if self._dirty:
             ans = QMessageBox.question(
-                self, "Unsaved changes",
-                "You have unsaved changes. Discard them?",
+                self, STRINGS["regex_unsaved_title"],
+                STRINGS["regex_unsaved_msg"],
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
             if ans != QMessageBox.StandardButton.Yes:
@@ -546,7 +540,7 @@ class RegexEditorPanel(QWidget):
         try:
             text = path.read_text(encoding="utf-8")
         except Exception as e:
-            QMessageBox.critical(self, "Read error", str(e))
+            QMessageBox.critical(self, STRINGS["dlg_read_error"], str(e))
             return
 
         self._editor.blockSignals(True)
@@ -562,7 +556,7 @@ class RegexEditorPanel(QWidget):
             self._dirty = True
             self._btn_save.setEnabled(True)
             self._btn_discard.setEnabled(True)
-            self._lbl_dirty.setText("● Unsaved changes")
+            self._lbl_dirty.setText(STRINGS["regex_dirty"])
 
     # ── Save / discard ────────────────────────────────────────────────────
 
@@ -576,13 +570,13 @@ class RegexEditorPanel(QWidget):
         try:
             parser.read_string(text)
         except configparser.Error as e:
-            QMessageBox.critical(self, "Invalid config", str(e))
+            QMessageBox.critical(self, STRINGS["dlg_invalid_config"], str(e))
             return
 
         try:
             self._current_path.write_text(text, encoding="utf-8")
         except Exception as e:
-            QMessageBox.critical(self, "Write error", str(e))
+            QMessageBox.critical(self, STRINGS["dlg_write_error_regex"], str(e))
             return
 
         self._dirty = False
@@ -592,7 +586,7 @@ class RegexEditorPanel(QWidget):
 
         try:
             reload_engine()
-            self._lbl_dirty.setText("✓ Saved and engine reloaded.")
+            self._lbl_dirty.setText(STRINGS["regex_saved"])
             self._lbl_dirty.setStyleSheet(f"color: {GREEN}; font-size: 9pt;")
         except Exception as e:
             self._lbl_dirty.setText(f"Saved, but reload failed: {e}")

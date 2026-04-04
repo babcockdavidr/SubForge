@@ -1,5 +1,5 @@
 """
-SubScrubber Settings dialog.
+SubForge Settings dialog.
 
 Two tabs:
   - Cleaning Options — global content cleaning settings applied at save time
@@ -21,11 +21,13 @@ from PyQt6.QtWidgets import (
 )
 
 import sys
+import webbrowser
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core.cleaner_options import CleaningOptions
 from core.mkvtoolnix import get_mkvmerge_path, set_mkvmerge_path, mkvmerge_available
-from .colors import BG, BG2, BG3, BORDER, FG, FG2, ACCENT, RED, ORANGE, GREEN
+from .colors import BG, BG2, BG3, BORDER, FG, FG2, ACCENT, RED, ORANGE, GREEN, YELLOW
+from .strings import STRINGS
 
 _SETTINGS_FILE = Path(__file__).parent.parent / "settings.json"
 
@@ -48,6 +50,36 @@ def _save_settings(data: dict) -> None:
         _SETTINGS_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
     except Exception:
         pass
+
+
+def load_default_sensitivity() -> int:
+    """Load default sensitivity from settings.json. Returns 3 if not set."""
+    return _load_settings().get("default_sensitivity", 3)
+
+
+def save_default_sensitivity(value: int) -> None:
+    """Persist default sensitivity to settings.json."""
+    s = _load_settings()
+    s["default_sensitivity"] = value
+    _save_settings(s)
+
+
+def load_language() -> str:
+    """Load saved language code from settings.json. Returns 'en' if not set."""
+    return _load_settings().get("language", "en")
+
+
+def save_language(lang_code: str) -> None:
+    """Persist language code to settings.json."""
+    s = _load_settings()
+    s["language"] = lang_code
+    _save_settings(s)
+
+
+def get_language() -> str:
+    """Return currently active language code."""
+    from .strings import get_language as _get
+    return _get()
 
 
 def load_cleaning_options() -> CleaningOptions:
@@ -99,7 +131,7 @@ def save_cleaning_options(opts: CleaningOptions) -> None:
 class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("SubScrubber Settings")
+        self.setWindowTitle(STRINGS["settings_title"])
         self.setMinimumWidth(580)
         self.setMinimumHeight(520)
         self.setStyleSheet(f"QDialog {{ background: {BG}; color: {FG}; }}")
@@ -115,9 +147,11 @@ class SettingsDialog(QDialog):
         )
         layout.addWidget(self._tabs, stretch=1)
 
-        # Build tabs
+        # Build tabs — General first, About last
+        self._build_general_tab()
         self._build_cleaning_tab()
         self._build_paths_tab()
+        self._build_about_tab()
 
         # Dialog buttons
         btn_box = QDialogButtonBox(
@@ -128,9 +162,124 @@ class SettingsDialog(QDialog):
         btn_box.accepted.connect(self._save)
         btn_box.rejected.connect(self.reject)
         layout.addWidget(btn_box)
+        self._btn_box = btn_box
+
+        # Hide Save/Cancel when on About tab
+        self._tabs.currentChanged.connect(
+            lambda i: self._btn_box.setVisible(
+                self._tabs.tabText(i) != "About"
+            )
+        )
 
         # Load current values
         self._load_current_values()
+
+    # ── General tab ───────────────────────────────────────────────────────
+
+    def _build_general_tab(self):
+        from PyQt6.QtWidgets import QSlider
+        from PyQt6.QtCore import Qt
+        tab = QWidget()
+        tab.setStyleSheet(f"background: {BG};")
+        outer = QVBoxLayout(tab)
+        outer.setContentsMargins(16, 16, 16, 8)
+        outer.setSpacing(16)
+
+        # ── Default sensitivity ───────────────────────────────────────────
+        sens_grp = QGroupBox(STRINGS["settings_grp_sensitivity"])
+        sens_grp.setStyleSheet(
+            f"QGroupBox {{ border: 1px solid {BORDER}; border-radius: 4px; "
+            f"color: {FG2}; margin-top: 8px; padding-top: 6px; }}"
+            f"QGroupBox::title {{ subcontrol-origin: margin; left: 10px; padding: 0 4px; }}"
+        )
+        sens_layout = QVBoxLayout(sens_grp)
+
+        sens_desc = QLabel(STRINGS["settings_sens_desc"])
+        sens_desc.setWordWrap(True)
+        sens_desc.setStyleSheet(f"color: {FG2}; font-size: 10pt;")
+        sens_layout.addWidget(sens_desc)
+
+        slider_row = QHBoxLayout()
+        lbl_agg = QLabel(STRINGS["sens_more_aggressive"])
+        lbl_agg.setStyleSheet(f"color: {RED}; font-size: 9pt;")
+        lbl_con = QLabel(STRINGS["sens_more_conservative"])
+        lbl_con.setStyleSheet(f"color: {GREEN}; font-size: 9pt;")
+
+        self._sens_slider = QSlider(Qt.Orientation.Horizontal)
+        self._sens_slider.setMinimum(1)
+        self._sens_slider.setMaximum(5)
+        self._sens_slider.setValue(load_default_sensitivity())
+        self._sens_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self._sens_slider.setTickInterval(1)
+        self._sens_slider.setFixedWidth(200)
+
+        _labels = {
+            1: "Very Aggressive",
+            2: "Aggressive",
+            3: "Balanced (default)",
+            4: "Conservative",
+            5: "Very Conservative",
+        }
+        self._lbl_sens_val = QLabel(_labels.get(self._sens_slider.value(), ""))
+        self._lbl_sens_val.setStyleSheet(f"color: {YELLOW}; font-size: 10pt;")
+        self._sens_slider.valueChanged.connect(
+            lambda v: self._lbl_sens_val.setText(_labels.get(v, str(v)))
+        )
+
+        slider_row.addWidget(lbl_agg)
+        slider_row.addWidget(self._sens_slider)
+        slider_row.addWidget(lbl_con)
+        slider_row.addSpacing(12)
+        slider_row.addWidget(self._lbl_sens_val, stretch=1)
+        sens_layout.addLayout(slider_row)
+        outer.addWidget(sens_grp)
+
+        # ── Placeholders (v1.0.0) ────────────────────────────────────────
+        # ── Language selector ─────────────────────────────────────────────
+        from PyQt6.QtWidgets import QComboBox
+        from .strings import LANGUAGES, LANGUAGE_NAMES, get_language
+        lang_grp = QGroupBox("Language")
+        lang_grp.setStyleSheet(
+            f"QGroupBox {{ border: 1px solid {BORDER}; border-radius: 4px; "
+            f"color: {FG2}; margin-top: 8px; padding-top: 6px; }}"
+            f"QGroupBox::title {{ subcontrol-origin: margin; left: 10px; padding: 0 4px; }}"
+        )
+        lang_layout = QVBoxLayout(lang_grp)
+        lang_row = QHBoxLayout()
+        lang_lbl = QLabel(STRINGS["settings_lbl_language"])
+        lang_lbl.setStyleSheet(f"color: {FG}; font-size: 10pt;")
+        self._lang_combo = QComboBox()
+        self._lang_codes = list(LANGUAGES.keys())
+        for code in self._lang_codes:
+            self._lang_combo.addItem(LANGUAGE_NAMES[code])
+        current_lang = get_language()
+        if current_lang in self._lang_codes:
+            self._lang_combo.setCurrentIndex(self._lang_codes.index(current_lang))
+        self._lang_combo.setStyleSheet(
+            f"background: {BG2}; color: {FG}; border: 1px solid {BORDER}; "
+            f"border-radius: 3px; padding: 3px 8px; font-size: 10pt;"
+        )
+        lang_row.addWidget(lang_lbl)
+        lang_row.addWidget(self._lang_combo)
+        lang_row.addStretch()
+        lang_layout.addLayout(lang_row)
+        outer.addWidget(lang_grp)
+
+        future_grp = QGroupBox(STRINGS["settings_future_grp"])
+        future_grp.setStyleSheet(
+            f"QGroupBox {{ border: 1px solid {BORDER}; border-radius: 4px; "
+            f"color: {FG2}; margin-top: 8px; padding-top: 6px; }}"
+            f"QGroupBox::title {{ subcontrol-origin: margin; left: 10px; padding: 0 4px; }}"
+        )
+        future_layout = QVBoxLayout(future_grp)
+        for label in [STRINGS["settings_future_theme"], STRINGS["settings_future_font"], STRINGS["settings_future_lang"]]:
+            lbl = QLabel(f"○  {label}")
+            lbl.setStyleSheet(f"color: {FG2}; font-size: 10pt; padding: 2px 0;")
+            future_layout.addWidget(lbl)
+        outer.addWidget(future_grp)
+
+        outer.addStretch()
+        self._tabs.addTab(tab, STRINGS["settings_tab_general"])
 
     # ── Cleaning Options tab ──────────────────────────────────────────────
 
@@ -141,20 +290,13 @@ class SettingsDialog(QDialog):
         outer.setContentsMargins(16, 16, 16, 8)
         outer.setSpacing(12)
 
-        desc = QLabel(
-            "These options modify subtitle content at clean time. They apply "
-            "globally — the same settings are used in Single File, Batch, and "
-            "Video Scan. All options are off by default."
-        )
+        desc = QLabel(STRINGS["settings_cleaning_desc"])
         desc.setWordWrap(True)
         desc.setStyleSheet(f"color: {FG2}; font-size: 10pt;")
         outer.addWidget(desc)
 
         # SDH accessibility warning — shown when SDH checkbox is ticked
-        self._lbl_sdh_warn = QLabel(
-            "Warning: Removing SDH content reduces accessibility "
-            "for deaf and hard of hearing viewers."
-        )
+        self._lbl_sdh_warn = QLabel(STRINGS["settings_sdh_warn"])
         self._lbl_sdh_warn.setWordWrap(True)
         self._lbl_sdh_warn.setStyleSheet(
             f"color: {ORANGE}; font-size: 9pt; font-style: italic; "
@@ -198,23 +340,19 @@ class SettingsDialog(QDialog):
             return lbl
 
         # Content removal
-        inner.addWidget(section_label("Content Removal"))
-        self._chk_music    = chk("Remove music cues",
-            "Removes lines consisting entirely of ♪ ♫ music symbols.")
-        self._chk_sdh      = chk("Remove SDH annotations",
-            "Removes sound descriptions like [DOOR SLAMS] and (LAUGHING).")
-        self._chk_speakers = chk("Remove speaker labels",
-            "Removes speaker prefixes like JOHN: or - MARY: at the start of lines.")
+        inner.addWidget(section_label(STRINGS["settings_section_removal"]))
+        self._chk_music    = chk(STRINGS["settings_chk_music"], STRINGS["settings_chk_music_tip"])
+        self._chk_sdh      = chk(STRINGS["settings_chk_sdh"], STRINGS["settings_chk_sdh_tip"])
+        self._chk_speakers = chk(STRINGS["settings_chk_speakers"], STRINGS["settings_chk_speakers_tip"])
         inner.addWidget(self._chk_music)
         inner.addWidget(self._chk_sdh)
         inner.addWidget(self._chk_speakers)
 
         # Formatting
-        inner.addWidget(section_label("Formatting"))
-        self._chk_tags       = chk("Remove text formatting tags",
-            "Removes <font> and other HTML tags. Italic and bold can be preserved below.")
-        self._chk_tag_italic = sub_chk("Preserve italic  <i>")
-        self._chk_tag_bold   = sub_chk("Preserve bold  <b>")
+        inner.addWidget(section_label(STRINGS["settings_section_formatting"]))
+        self._chk_tags       = chk(STRINGS["settings_chk_tags"], STRINGS["settings_chk_tags_tip"])
+        self._chk_tag_italic = sub_chk(STRINGS["settings_chk_italic"])
+        self._chk_tag_bold   = sub_chk(STRINGS["settings_chk_bold"])
         self._chk_tag_italic.setChecked(True)
         self._chk_tag_bold.setChecked(True)
         self._chk_tag_italic.setVisible(False)
@@ -224,20 +362,20 @@ class SettingsDialog(QDialog):
         inner.addWidget(self._chk_tag_bold)
 
         # Bracket removal
-        inner.addWidget(section_label("Remove Content Between"))
-        self._chk_br_curly    = sub_chk("Curly brackets  { }")
-        self._chk_br_square   = sub_chk("Square brackets  [ ]")
-        self._chk_br_parens   = sub_chk("Parentheses  ( )")
-        self._chk_br_asterisk = sub_chk("Asterisks  * ... *")
-        self._chk_br_hash     = sub_chk("Hashtags  # ... #")
+        inner.addWidget(section_label(STRINGS["settings_section_between"]))
+        self._chk_br_curly    = sub_chk(STRINGS["settings_chk_curly"])
+        self._chk_br_square   = sub_chk(STRINGS["settings_chk_square"])
+        self._chk_br_parens   = sub_chk(STRINGS["settings_chk_parens"])
+        self._chk_br_asterisk = sub_chk(STRINGS["settings_chk_asterisk"])
+        self._chk_br_hash     = sub_chk(STRINGS["settings_chk_hash"])
         for c in [self._chk_br_curly, self._chk_br_square, self._chk_br_parens,
                   self._chk_br_asterisk, self._chk_br_hash]:
             inner.addWidget(c)
 
         # Other
-        inner.addWidget(section_label("Other"))
-        self._chk_norm_case  = chk("Convert uppercase text to sentence case")
-        self._chk_merge_dupe = chk("Merge consecutive duplicate cues")
+        inner.addWidget(section_label(STRINGS["settings_section_other"]))
+        self._chk_norm_case  = chk(STRINGS["settings_chk_norm_case"])
+        self._chk_merge_dupe = chk(STRINGS["settings_chk_merge_dupe"])
         inner.addWidget(self._chk_norm_case)
         inner.addWidget(self._chk_merge_dupe)
 
@@ -250,7 +388,92 @@ class SettingsDialog(QDialog):
         self._chk_tags.toggled.connect(self._chk_tag_italic.setVisible)
         self._chk_tags.toggled.connect(self._chk_tag_bold.setVisible)
 
-        self._tabs.addTab(tab, "Cleaning Options")
+        self._tabs.addTab(tab, STRINGS["settings_tab_cleaning"])
+
+    # ── About tab ────────────────────────────────────────────────────────
+
+    def _build_about_tab(self):
+        from core.updater import CURRENT_VERSION
+        tab = QWidget()
+        tab.setStyleSheet(f"background: {BG};")
+        outer = QVBoxLayout(tab)
+        outer.setContentsMargins(32, 32, 32, 24)
+        outer.setSpacing(0)
+
+        # App name
+        lbl_name = QLabel(STRINGS["app_title"])
+        lbl_name.setStyleSheet(
+            f"color: {ACCENT}; font-size: 22pt; font-weight: bold; letter-spacing: 2px;"
+        )
+        outer.addWidget(lbl_name)
+
+        # Version
+        lbl_version = QLabel(CURRENT_VERSION)
+        lbl_version.setStyleSheet(f"color: {FG2}; font-size: 11pt; margin-bottom: 16px;")
+        outer.addWidget(lbl_version)
+
+        outer.addSpacing(12)
+
+        # Tagline
+        lbl_tag = QLabel(STRINGS["settings_about_tagline"])
+        lbl_tag.setWordWrap(True)
+        lbl_tag.setStyleSheet(f"color: {FG}; font-size: 10pt;")
+        outer.addWidget(lbl_tag)
+
+        outer.addSpacing(24)
+
+        # Primary credit
+        lbl_author = QLabel(STRINGS["settings_about_author"])
+        lbl_author.setStyleSheet(f"color: {FG}; font-size: 11pt; font-weight: bold;")
+        outer.addWidget(lbl_author)
+
+        outer.addSpacing(4)
+
+        # GitHub link
+        lbl_github = QLabel(
+            '<a href="https://github.com/babcockdavidr/SubForge" '
+            f'style="color: {ACCENT};">github.com/babcockdavidr/SubForge</a>'
+        )
+        lbl_github.setOpenExternalLinks(True)
+        lbl_github.setStyleSheet("font-size: 10pt;")
+        outer.addWidget(lbl_github)
+
+        outer.addSpacing(24)
+
+        # License
+        lbl_license = QLabel(STRINGS["settings_about_license"])
+        lbl_license.setStyleSheet(f"color: {FG2}; font-size: 10pt;")
+        outer.addWidget(lbl_license)
+
+        outer.addSpacing(8)
+
+        # Detection engine credit
+        lbl_credit = QLabel(
+            f'<a href="https://github.com/KBlixt/subcleaner" '
+            f'style="color: {FG2};">subcleaner</a> — '
+            + STRINGS["settings_about_credit"]
+        )
+        lbl_credit.setOpenExternalLinks(True)
+        lbl_credit.setStyleSheet(f"color: {FG2}; font-size: 9pt;")
+        outer.addWidget(lbl_credit)
+
+        outer.addStretch()
+
+        # Report an Issue button
+        btn_issue = QPushButton(STRINGS["settings_btn_report_issue"])
+        btn_issue.setStyleSheet(
+            f"font-size: 10pt; padding: 6px 16px; color: {FG2}; "
+            f"border: 1px solid {BORDER}; border-radius: 3px; background: {BG2};"
+        )
+        btn_issue.clicked.connect(lambda: webbrowser.open(
+            "https://github.com/babcockdavidr/SubForge/issues/new"
+        ))
+        btn_row = QHBoxLayout()
+        btn_row.addStretch()
+        btn_row.addWidget(btn_issue)
+        outer.addLayout(btn_row)
+
+        self._tabs.addTab(tab, STRINGS["settings_tab_about"])
 
     # ── Paths tab ────────────────────────────────────────────────────────
 
@@ -262,7 +485,7 @@ class SettingsDialog(QDialog):
         outer.setSpacing(16)
 
         # MKVToolNix
-        grp = QGroupBox("MKVToolNix")
+        grp = QGroupBox(STRINGS["settings_grp_mkv"])
         grp.setStyleSheet(
             f"QGroupBox {{ border: 1px solid {BORDER}; border-radius: 4px; "
             f"color: {FG2}; margin-top: 8px; padding-top: 6px; }}"
@@ -270,19 +493,13 @@ class SettingsDialog(QDialog):
         )
         gl = QVBoxLayout(grp)
 
-        info = QLabel(
-            "mkvmerge is used to rebuild MKV files with cleaned subtitle tracks. "
-            "If it is not on your system PATH, specify the full path to mkvmerge.exe below. "
-            "Not required for MP4 and M4V files."
-        )
+        info = QLabel(STRINGS["settings_mkv_info"])
         info.setWordWrap(True)
         info.setStyleSheet(f"color: {FG2}; font-size: 10pt;")
 
         path_row = QHBoxLayout()
         self._mkv_path_input = QLineEdit()
-        self._mkv_path_input.setPlaceholderText(
-            r"e.g. C:\Program Files\MKVToolNix\mkvmerge.exe"
-        )
+        self._mkv_path_input.setPlaceholderText(STRINGS["settings_mkv_placeholder"])
         self._mkv_path_input.setStyleSheet(
             f"background: {BG2}; color: {FG}; border: 1px solid {BORDER}; "
             f"border-radius: 3px; padding: 4px;"
@@ -291,7 +508,7 @@ class SettingsDialog(QDialog):
         if current:
             self._mkv_path_input.setText(current)
 
-        btn_browse = QPushButton("Browse…")
+        btn_browse = QPushButton(STRINGS["settings_browse"])
         btn_browse.clicked.connect(self._browse_mkvmerge)
         path_row.addWidget(self._mkv_path_input, stretch=1)
         path_row.addWidget(btn_browse)
@@ -307,7 +524,7 @@ class SettingsDialog(QDialog):
         outer.addStretch()
 
         self._mkv_path_input.textChanged.connect(self._update_mkv_status)
-        self._tabs.addTab(tab, "Paths")
+        self._tabs.addTab(tab, STRINGS["settings_tab_paths"])
 
     def _browse_mkvmerge(self):
         path, _ = QFileDialog.getOpenFileName(
@@ -320,25 +537,26 @@ class SettingsDialog(QDialog):
     def _update_mkv_status(self):
         path = self._mkv_path_input.text().strip()
         if path and Path(path).is_file():
-            self._lbl_mkv_status.setText("✓ File found.")
+            self._lbl_mkv_status.setText(STRINGS["settings_mkv_found"])
             self._lbl_mkv_status.setStyleSheet(f"color: {GREEN}; font-size: 10pt;")
         elif path:
-            self._lbl_mkv_status.setText("✕ File not found at that path.")
+            self._lbl_mkv_status.setText(STRINGS["settings_mkv_not_found"])
             self._lbl_mkv_status.setStyleSheet(f"color: {RED}; font-size: 10pt;")
         elif mkvmerge_available():
             self._lbl_mkv_status.setText(
-                f"✓ mkvmerge found on PATH: {get_mkvmerge_path()}"
+                STRINGS["settings_mkv_on_path"].format(path=get_mkvmerge_path())
             )
             self._lbl_mkv_status.setStyleSheet(f"color: {GREEN}; font-size: 10pt;")
         else:
             self._lbl_mkv_status.setText(
-                "mkvmerge not found. Install from https://mkvtoolnix.download/"
+                STRINGS["settings_mkv_missing"]
             )
             self._lbl_mkv_status.setStyleSheet(f"color: {ORANGE}; font-size: 10pt;")
 
     # ── Load / Save ───────────────────────────────────────────────────────
 
     def _load_current_values(self):
+        self._sens_slider.setValue(load_default_sensitivity())
         opts = load_cleaning_options()
         self._chk_music.setChecked(opts.remove_music_cues)
         self._chk_sdh.setChecked(opts.remove_sdh_annotations)
@@ -358,6 +576,14 @@ class SettingsDialog(QDialog):
         self._lbl_sdh_warn.setVisible(opts.remove_sdh_annotations)
 
     def _save(self):
+        save_default_sensitivity(self._sens_slider.value())
+        # Save and apply language
+        selected_idx = self._lang_combo.currentIndex()
+        lang_code = self._lang_codes[selected_idx]
+        prev_lang = get_language()
+        save_language(lang_code)
+        from .strings import set_language
+        set_language(lang_code)
         opts = CleaningOptions(
             remove_music_cues=self._chk_music.isChecked(),
             remove_sdh_annotations=self._chk_sdh.isChecked(),
@@ -380,3 +606,23 @@ class SettingsDialog(QDialog):
             set_mkvmerge_path(path)
 
         self.accept()
+
+        # Offer restart if language changed
+        if lang_code != prev_lang:
+            import sys, os
+            from PyQt6.QtWidgets import QMessageBox, QApplication
+            btn = QMessageBox.question(
+                None,
+                STRINGS["settings_btn_restart"],
+                STRINGS["settings_restart_required"],
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if btn == QMessageBox.StandardButton.Yes:
+                app = QApplication.instance()
+                if app:
+                    app.aboutToQuit.connect(
+                        lambda: os.execv(sys.executable, [sys.executable] + sys.argv)
+                    )
+                    app.quit()
+                else:
+                    os.execv(sys.executable, [sys.executable] + sys.argv)

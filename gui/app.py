@@ -1,5 +1,5 @@
 """
-SubScrubber GUI — PyQt6
+SubForge GUI — PyQt6
 Dark industrial theme. Diff review workflow: flag → approve/deny per block.
 """
 from __future__ import annotations
@@ -25,7 +25,8 @@ from PyQt6.QtWidgets import (
 
 from core import load_subtitle, write_subtitle, analyze, clean, SUPPORTED_EXTENSIONS
 from core import CleaningOptions, apply_cleaning_options
-from .settings_dialog import SettingsDialog, load_cleaning_options
+from .settings_dialog import SettingsDialog, load_cleaning_options, load_default_sensitivity
+from .strings import STRINGS
 from core import block_will_be_removed
 from core import VIDEO_EXTENSIONS
 from core.subtitle import ParsedSubtitle, SubBlock
@@ -389,11 +390,11 @@ class DropZone(QFrame):
         icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         icon.setStyleSheet(f"font-size: 18pt; color: {FG2};")
 
-        msg = QLabel("Drop subtitle files here\n.srt  .ass  .ssa  .vtt")
+        msg = QLabel(STRINGS["sf_drop_label"] + "\n" + STRINGS["sf_drop_formats"])
         msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
         msg.setStyleSheet(f"color: {FG2}; font-size: 10pt; line-height: 1.8;")
 
-        browse = QPushButton("Browse…")
+        browse = QPushButton(STRINGS["sf_browse"])
         browse.setMaximumWidth(100)
         browse.clicked.connect(self._browse)
 
@@ -429,7 +430,7 @@ class DropZone(QFrame):
 class MainWindow(QMainWindow):
     def __init__(self, preload: List[Path] = None):
         super().__init__()
-        self.setWindowTitle("SubScrubber")
+        self.setWindowTitle(STRINGS["app_title"])
         self.resize(1200, 750)
         self.setMinimumSize(900, 600)
 
@@ -452,14 +453,14 @@ class MainWindow(QMainWindow):
         toolbar.setIconSize(QSize(16, 16))
         self.addToolBar(toolbar)
 
-        title = QLabel("SUBSCRUBBER")
+        title = QLabel(STRINGS["app_toolbar_label"])
         toolbar.addWidget(title)
 
         tb_spacer = QWidget()
         tb_spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         toolbar.addWidget(tb_spacer)
 
-        self._btn_settings = QPushButton("⚙ Settings")
+        self._btn_settings = QPushButton(STRINGS["app_btn_settings"])
         self._btn_settings.setStyleSheet(
             f"font-size: 9pt; padding: 2px 10px; color: {FG2};"
             f"border: 1px solid {BORDER}; border-radius: 3px; background: transparent;"
@@ -469,10 +470,10 @@ class MainWindow(QMainWindow):
         # Status bar
         self._status = QStatusBar()
         self.setStatusBar(self._status)
-        self._status.showMessage("Ready — drop subtitle files to begin")
-        self._version_label = QLabel("v0.7.0")
+        self._status.showMessage(STRINGS["msg_ready"])
+        self._version_label = QLabel(STRINGS["app_version"])
         self._version_label.setStyleSheet(f"color: {FG2}; font-size: 9pt; padding-right: 6px;")
-        self._btn_check_updates = QPushButton("Check for Updates")
+        self._btn_check_updates = QPushButton(STRINGS["app_btn_check_updates"])
         self._btn_check_updates.setStyleSheet(
             f"font-size: 9pt; padding: 1px 8px; color: {FG2};"
             f"border: 1px solid {BORDER}; border-radius: 3px; background: transparent;"
@@ -496,7 +497,7 @@ class MainWindow(QMainWindow):
 
         # File info bar
         info_row = QHBoxLayout()
-        self._lbl_file = QLabel("No file loaded")
+        self._lbl_file = QLabel(STRINGS["sf_no_file_loaded"])
         self._lbl_file.setObjectName("file_status")
         self._progress = QProgressBar()
         self._progress.setVisible(False)
@@ -517,9 +518,9 @@ class MainWindow(QMainWindow):
         # ── Single File controls row ──────────────────────────────────────
         sf_controls = QHBoxLayout()
 
-        self._chk_dry_run = QCheckBox("Dry run")
-        self._chk_warnings = QCheckBox("Remove warnings")
-        self._btn_open_folder = QPushButton("Open Folder…")
+        self._chk_dry_run = QCheckBox(STRINGS["sf_chk_dry_run"])
+        self._chk_warnings = QCheckBox(STRINGS["sf_chk_remove_warnings"])
+        self._btn_open_folder = QPushButton(STRINGS["sf_btn_open_folder"])
 
         # Sensitivity slider for single file
         sf_thresh_frame = QFrame()
@@ -529,22 +530,22 @@ class MainWindow(QMainWindow):
         sf_thresh_layout = QHBoxLayout(sf_thresh_frame)
         sf_thresh_layout.setContentsMargins(10, 4, 10, 4)
 
-        sf_thresh_lbl = QLabel("Sensitivity:")
+        sf_thresh_lbl = QLabel(STRINGS["sens_label"])
         sf_thresh_lbl.setStyleSheet(f"color: {FG}; font-weight: bold;")
-        lbl_agg = QLabel("More aggressive")
+        lbl_agg = QLabel(STRINGS["sens_more_aggressive"])
         lbl_agg.setStyleSheet(f"color: {RED}; font-size: 8pt;")
-        lbl_con = QLabel("More conservative")
+        lbl_con = QLabel(STRINGS["sens_more_conservative"])
         lbl_con.setStyleSheet(f"color: {GREEN}; font-size: 8pt;")
 
         self._sf_slider = QSlider(Qt.Orientation.Horizontal)
         self._sf_slider.setMinimum(1)
         self._sf_slider.setMaximum(5)
-        self._sf_slider.setValue(3)
+        self._sf_slider.setValue(load_default_sensitivity())
         self._sf_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self._sf_slider.setTickInterval(1)
         self._sf_slider.setFixedWidth(160)
 
-        self._sf_lbl_threshold = QLabel("Balanced (default)")
+        self._sf_lbl_threshold = QLabel(STRINGS["thresh_3"])
         self._sf_lbl_threshold.setStyleSheet(f"color: {YELLOW}; font-size: 9pt;")
 
         sf_thresh_layout.addWidget(sf_thresh_lbl)
@@ -569,7 +570,7 @@ class MainWindow(QMainWindow):
         queue_layout.setContentsMargins(0, 0, 0, 0)
         queue_layout.setSpacing(6)
 
-        lbl_queue = QLabel("FILE QUEUE")
+        lbl_queue = QLabel(STRINGS["sf_lbl_file_queue"])
         lbl_queue.setObjectName("section_label")
 
         self._file_list = QListWidget()
@@ -597,7 +598,7 @@ class MainWindow(QMainWindow):
         block_layout.setContentsMargins(0, 0, 0, 0)
         block_layout.setSpacing(4)
 
-        lbl_blocks = QLabel("SUBTITLE BLOCKS")
+        lbl_blocks = QLabel(STRINGS["sf_lbl_subtitle_blocks"])
         lbl_blocks.setObjectName("section_label")
         self._block_list = QListWidget()
         self._block_list.setFont(QFont("Consolas", 11))
@@ -614,7 +615,7 @@ class MainWindow(QMainWindow):
         detail_layout.setContentsMargins(0, 0, 0, 0)
         detail_layout.setSpacing(6)
 
-        lbl_detail = QLabel("BLOCK DETAIL")
+        lbl_detail = QLabel(STRINGS["sf_lbl_block_detail"])
         lbl_detail.setObjectName("section_label")
 
         self._detail_text = QTextEdit()
@@ -625,18 +626,17 @@ class MainWindow(QMainWindow):
         self._reasons_text.setReadOnly(True)
         self._reasons_text.setMaximumHeight(80)
         self._reasons_text.setFont(QFont("Consolas", 11))
-        self._reasons_text.setPlaceholderText("Matched patterns will appear here…")
+        self._reasons_text.setPlaceholderText(STRINGS["sf_patterns_placeholder"])
 
         btn_row = QHBoxLayout()
-        self._btn_mark_ad = QPushButton("Mark as Ad")
+        self._btn_mark_ad = QPushButton(STRINGS["sf_btn_mark_ad"])
         self._btn_mark_ad.setObjectName("btn_remove")
-        self._btn_keep = QPushButton("Keep Block")
+        self._btn_keep = QPushButton(STRINGS["sf_btn_keep"])
         self._btn_keep.setObjectName("btn_keep")
-        self._btn_always_ad = QPushButton("Always Mark as Ad...")
+        self._btn_always_ad = QPushButton(STRINGS["sf_btn_always_ad"])
         self._btn_always_ad.setObjectName("btn_remove")
         self._btn_always_ad.setToolTip(
-            "Add a regex pattern for this block's text to a profile,\n"
-            "so it is automatically flagged in all future files."
+            STRINGS["sf_btn_always_ad_tip"]
         )
         self._btn_always_ad.setEnabled(False)
         btn_row.addWidget(self._btn_mark_ad)
@@ -655,7 +655,7 @@ class MainWindow(QMainWindow):
         report_layout.setContentsMargins(0, 0, 0, 0)
         report_layout.setSpacing(4)
 
-        lbl_report = QLabel("FILE REPORT")
+        lbl_report = QLabel(STRINGS["sf_lbl_file_report"])
         lbl_report.setObjectName("section_label")
         self._report_text = QTextEdit()
         self._report_text.setReadOnly(True)
@@ -675,11 +675,11 @@ class MainWindow(QMainWindow):
 
         # Action bar (Prev/Next/Clean & Save) — lives inside Single File tab
         action_bar = QHBoxLayout()
-        self._btn_prev = QPushButton("Prev File")
-        self._btn_next = QPushButton("Next File")
+        self._btn_prev = QPushButton(STRINGS["sf_btn_prev"])
+        self._btn_next = QPushButton(STRINGS["sf_btn_next"])
         self._lbl_stats = QLabel("")
         self._lbl_stats.setObjectName("file_status")
-        self._btn_clean_all = QPushButton("Clean && Save")
+        self._btn_clean_all = QPushButton(STRINGS["sf_btn_clean_save"])
         self._btn_clean_all.setObjectName("btn_save_green")
         self._btn_clean_all.setEnabled(False)
         action_bar.addWidget(self._btn_prev)
@@ -694,22 +694,22 @@ class MainWindow(QMainWindow):
         single_layout.addWidget(splitter, stretch=1)
         single_layout.addLayout(action_bar)
 
-        self._tabs.addTab(single_tab, "Single File")
+        self._tabs.addTab(single_tab, STRINGS["tab_single_file"])
 
         # Tab 3: Batch mode
         from .batch_panel import BatchPanel
         self._batch_panel = BatchPanel()
-        self._tabs.addTab(self._batch_panel, "Batch")
+        self._tabs.addTab(self._batch_panel, STRINGS["tab_batch"])
 
         # Tab 4: Video / embedded subtitle scan
         from .video_panel import VideoScanPanel
         self._video_panel = VideoScanPanel()
-        self._tabs.addTab(self._video_panel, "Video Scan")
+        self._tabs.addTab(self._video_panel, STRINGS["tab_video_scan"])
 
         # Tab 5: Regex profile editor
         from .regex_editor import RegexEditorPanel
         self._regex_editor = RegexEditorPanel()
-        self._tabs.addTab(self._regex_editor, "Regex Editor")
+        self._tabs.addTab(self._regex_editor, STRINGS["tab_regex_editor"])
 
 
 
@@ -744,17 +744,22 @@ class MainWindow(QMainWindow):
 
     def _open_settings(self):
         dlg = SettingsDialog(self)
-        dlg.exec()
+        if dlg.exec():
+            # Push new default sensitivity to all three sliders immediately
+            v = load_default_sensitivity()
+            self._sf_slider.setValue(v)
+            self._batch_panel._slider.setValue(v)
+            self._video_panel._slider.setValue(v)
 
     # ── Single File sensitivity ──────────────────────────────────────────────
 
     def _on_sf_threshold_changed(self, value: int):
         labels = {
-            1: "Very Aggressive",
-            2: "Aggressive",
-            3: "Balanced (default)",
-            4: "Conservative",
-            5: "Very Conservative",
+            1: STRINGS["thresh_1"],
+            2: STRINGS["thresh_2"],
+            3: STRINGS["thresh_3"],
+            4: STRINGS["thresh_4"],
+            5: STRINGS["thresh_5"],
         }
         self._sf_lbl_threshold.setText(labels.get(value, str(value)))
         if self._subtitle is not None:
@@ -886,7 +891,7 @@ class MainWindow(QMainWindow):
 
     def _on_analysis_error(self, msg: str):
         self._progress.setVisible(False)
-        self._lbl_file.setText("Error loading file")
+        self._lbl_file.setText(STRINGS["msg_error_loading"])
         self._status.showMessage(f"Error: {msg}")
 
     # ── Block list ────────────────────────────────────────────────────────
@@ -1005,7 +1010,7 @@ class MainWindow(QMainWindow):
         removed = len(remove_set)
 
         if removed == 0:
-            self._status.showMessage("No blocks flagged for removal.")
+            self._status.showMessage(STRINGS["msg_no_blocks"])
             return
 
         if dry:
@@ -1039,7 +1044,7 @@ class MainWindow(QMainWindow):
         try:
             write_subtitle(self._subtitle)
         except Exception as e:
-            QMessageBox.critical(self, "Write Error", str(e))
+            QMessageBox.critical(self, STRINGS["dlg_write_error"], str(e))
             return
 
         self._status.showMessage(
@@ -1109,15 +1114,15 @@ class MainWindow(QMainWindow):
             self._populate_block_list(self._subtitle)
             self._refresh_stats()
             self._update_report()
-            self._status.showMessage("Engine reloaded — file re-analysed with new patterns.")
+            self._status.showMessage(STRINGS["msg_engine_reloaded"])
 
     # ── Update check ─────────────────────────────────────────────────────────
 
     def _check_for_updates(self):
         from core.updater import CURRENT_VERSION, RELEASES_URL, is_newer
         self._btn_check_updates.setEnabled(False)
-        self._btn_check_updates.setText("Checking...")
-        self._status.showMessage("Checking for updates...")
+        self._btn_check_updates.setText(STRINGS["app_btn_checking"])
+        self._status.showMessage(STRINGS["msg_checking_updates"])
 
         self._update_worker = UpdateWorker()
         self._update_worker.result_ready.connect(self._on_update_result)
@@ -1127,18 +1132,18 @@ class MainWindow(QMainWindow):
     def _on_update_result(self, tag: str, name: str):
         from core.updater import CURRENT_VERSION, RELEASES_URL, is_newer
         self._btn_check_updates.setEnabled(True)
-        self._btn_check_updates.setText("Check for Updates")
+        self._btn_check_updates.setText(STRINGS["app_btn_check_updates"])
 
         if is_newer(tag, CURRENT_VERSION):
             msg = (
-                "A new version of SubScrubber is available.\n\n"
+                "A new version of SubForge is available.\n\n"
                 f"Current version:  {CURRENT_VERSION}\n"
                 f"Latest version:   {tag}  ({name})\n\n"
                 "Visit the releases page to download the update."
             )
             answer = QMessageBox.information(
                 self,
-                "Update Available",
+                STRINGS["dlg_update_available"],
                 msg,
                 QMessageBox.StandardButton.Open | QMessageBox.StandardButton.Close,
             )
@@ -1149,21 +1154,22 @@ class MainWindow(QMainWindow):
         else:
             QMessageBox.information(
                 self,
-                "Up to Date",
-                f"You are running the latest version of SubScrubber ({CURRENT_VERSION}).",
+                STRINGS["dlg_up_to_date_title"],
+                f"You are running the latest version of SubForge ({CURRENT_VERSION}).",
             )
-            self._status.showMessage("SubScrubber is up to date.")
+            self._status.showMessage(STRINGS["msg_up_to_date"])
 
     def _on_update_error(self, msg: str):
+        from core.updater import RELEASES_URL
         self._btn_check_updates.setEnabled(True)
         self._btn_check_updates.setText("Check for Updates")
         err_msg = (
             f"Could not check for updates.\n\n{msg}\n\n"
             "Check your internet connection or visit:\n"
-            "https://github.com/babcockdavidr/SubScrubber-GUI/releases"
+            f"{RELEASES_URL}"
         )
-        QMessageBox.warning(self, "Update Check Failed", err_msg)
-        self._status.showMessage("Update check failed.")
+        QMessageBox.warning(self, STRINGS["dlg_update_failed_title"], err_msg)
+        self._status.showMessage(STRINGS["msg_update_failed"])
 
     def _append_cleaning_report(self, report):
         from core.cleaner_options import CleaningReport
