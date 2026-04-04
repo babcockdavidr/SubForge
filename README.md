@@ -121,6 +121,8 @@ For loading, inspecting, and cleaning individual subtitle files.
 
 The **Always Mark as Ad…** button teaches SubScrubber to recognise a pattern permanently, so it is automatically flagged in every future file — not just the current one.
 
+![Always Mark as Add dialog](images/Add_Pattern_Screenshot.png)
+
 **Workflow:**
 1. Select a flagged or suspicious block in the Single File tab
 2. Click **Always Mark as Ad…** — a dialog opens showing the block's original text
@@ -169,8 +171,6 @@ For cleaning an entire media library in one pass, including libraries where each
 
 Inspects subtitle tracks embedded directly inside video container files. Useful for checking and cleaning the subtitles built into MKV and MP4 files without needing to extract them manually first.
 
-![Video Scan — No Dependencies](images/Video_Scan_No_Dependencies.png)
-
 ![Video Scan Tab](images/Video_Scan_Screenshot.png)
 
 **Requires FFmpeg** installed and available on your system PATH. If FFmpeg is missing, a notice appears at the top of the tab. See the FFmpeg installation section below.
@@ -206,6 +206,8 @@ If `mkvmerge` is not on your system PATH, click **Settings** in the Video Scan t
 ## Regex Editor Tab
 
 A full in-app editor for the regex pattern profiles that drive detection. Changes are saved to disk and applied immediately without restarting.
+
+![Regex Editor Tab](images/Regex_Screenshot.png)
 
 **Left panel — profile list:**
 Each `.conf` file in `regex_profiles/default/` appears here with its language scope. Click one to load it into the editor.
