@@ -1,5 +1,5 @@
 """
-Update checker for SubScrubber.
+Update checker for SubForge.
 Compares current version against latest GitHub release tag using semantic versioning.
 Entirely opt-in — only runs when the user clicks "Check for Updates".
 Makes one GET request to the GitHub releases API and nothing else.
@@ -11,9 +11,9 @@ import urllib.request
 import json
 from typing import Optional, Tuple
 
-CURRENT_VERSION = "v0.7.0"
-GITHUB_API_URL  = "https://api.github.com/repos/babcockdavidr/SubScrubber-GUI/releases/latest"
-RELEASES_URL    = "https://github.com/babcockdavidr/SubScrubber-GUI/releases"
+CURRENT_VERSION = "v0.8.0"
+GITHUB_API_URL  = "https://api.github.com/repos/babcockdavidr/SubForge/releases/latest"
+RELEASES_URL    = "https://github.com/babcockdavidr/SubForge/releases"
 
 
 def _parse_version(tag: str) -> Tuple:
@@ -45,7 +45,7 @@ def fetch_latest_release(timeout: int = 8) -> Tuple[Optional[str], Optional[str]
     try:
         req = urllib.request.Request(
             GITHUB_API_URL,
-            headers={"User-Agent": f"SubScrubber/{CURRENT_VERSION}"}
+            headers={"User-Agent": f"SubForge/{CURRENT_VERSION}"}
         )
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             data = json.loads(resp.read().decode("utf-8"))
@@ -54,6 +54,10 @@ def fetch_latest_release(timeout: int = 8) -> Tuple[Optional[str], Optional[str]
         if not tag:
             return None, None, "No release tag found in API response."
         return tag, name, None
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return None, None, "No releases found. Check back after the next release is published."
+        return None, None, f"GitHub returned HTTP {e.code}."
     except urllib.error.URLError as e:
         return None, None, f"Network error: {e.reason}"
     except json.JSONDecodeError:

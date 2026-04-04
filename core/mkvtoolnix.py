@@ -3,7 +3,7 @@ MKVToolNix integration — mkvmerge-based subtitle track replacement.
 
 Pipeline:
   1. ffmpeg extracts each text subtitle track to a temp .srt/.ass file
-  2. SubScrubber cleans the extracted file (removes ad blocks)
+  2. SubForge cleans the extracted file (removes ad blocks)
   3. mkvmerge rebuilds the MKV:
        - all original video + audio streams kept via --no-subtitles + re-add
        - original subtitle tracks kept EXCEPT the ones being replaced
