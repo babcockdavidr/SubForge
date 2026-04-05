@@ -1,0 +1,95 @@
+name: Build & Release
+
+# Triggers on any tag push matching v* (e.g. v0.9.0, v1.0.0)
+# Also allows manual triggering from the Actions tab for testing
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+# macOS and Linux builds are not yet supported.
+# The source code is cross-platform but binaries are Windows-only until
+# those platforms can be properly tested. Planned post-1.0.0.
+
+jobs:
+
+  # ---------------------------------------------------------------------------
+  # Windows — produces the installer exe
+  # ---------------------------------------------------------------------------
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build with PyInstaller
+        run: python -m PyInstaller subforge.spec
+
+      - name: Install Inno Setup
+        run: choco install innosetup --yes
+
+      - name: Build installer
+        run: iscc installer\subforge_installer.iss
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: SubForge-windows-installer
+          path: installer/Output/SubForge-*-setup.exe
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Release — attaches the installer to the GitHub release
+  # ---------------------------------------------------------------------------
+  release:
+    needs: [build-windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Create GitHub Release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          name: SubForge ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') }}
+          body: |
+            ## SubForge ${{ github.ref_name }}
+
+            ### Downloads
+            | Platform | File |
+            |----------|------|
+            | Windows  | `SubForge-*-setup.exe` — installer, adds to Program Files and Start Menu |
+
+            > **macOS and Linux** — SubForge runs on macOS and Linux from source but
+            > pre-built binaries are not yet available. See the README for instructions.
+
+            ### Windows SmartScreen note
+            Windows may show an "unknown publisher" warning because SubForge is not
+            code-signed. Click **More info → Run anyway** to proceed. This is expected
+            for open source software without a paid signing certificate.
+
+            ### Requirements (optional)
+            - FFmpeg — for video scanning and MP4/M4V remuxing
+            - MKVToolNix — for MKV remuxing
+          files: |
+            artifacts/SubForge-windows-installer/SubForge-*-setup.exe
