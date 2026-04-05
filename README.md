@@ -1,6 +1,6 @@
-# SubForge — v0.8.0: Settings Expansion
+# SubForge — v0.9.0: Packaging & Distribution
 
-**Modern Subtitles piss me the fuck off. I made this to help. Remove ads, watermarks, and distributor junk from subtitle files.**
+**Remove ads, watermarks, and distributor junk from subtitle files.**
 
 SubForge is the ultimate, cross-platform, GUI-enabled, multi-format subtitle cleaning tool. Supports `.srt` · `.ass` · `.ssa` · `.vtt` · and embedded subtitles inside `.mkv` `.mp4` and more
 
@@ -9,6 +9,15 @@ Based on the detection engine from [KBlixt/subcleaner](https://github.com/KBlixt
 ---
 
 ## What's New
+
+### v0.9.0 — Packaging & Distribution
+- **Standalone executable** — SubForge now ships as a double-clickable Windows installer. No Python installation required. macOS and Linux binaries are planned for a future release.
+- **Windows installer** — a proper installer puts SubForge in Program Files, creates a Start Menu shortcut, and includes an uninstaller. Optional file associations for `.srt`, `.ass`, and `.vtt`.
+- **GitHub Actions** — every tagged release automatically builds the Windows installer and attaches it to the GitHub release. No manual uploads needed.
+- **First-run setup wizard** — on first launch, SubForge checks for FFmpeg and MKVToolNix, shows a green/red status for each, and provides download links for anything missing.
+- **Session memory** — SubForge now remembers your last Batch folder, last Video Scan folder, and window size and position across restarts.
+- **14 language packs** — the UI is now available in English, Spanish, Dutch, Hebrew, Indonesian, Portuguese, Swedish, French, Arabic, Chinese, Hindi, Russian, Turkish, and Polish. Select your language in Settings > General.
+- **HTML report strings** — all text in the Batch and Video Scan detail reports is now fully translatable and covered by all 14 language packs.
 
 ### v0.8.0 — Settings Expansion & Polish
 - **App renamed to SubForge** — the app is now SubForge. Entry point is `subforge.py`, GitHub repository is `babcockdavidr/SubForge`, and all internal references are updated.
@@ -20,30 +29,6 @@ Based on the detection engine from [KBlixt/subcleaner](https://github.com/KBlixt
 - **Column sort on Batch** — the scanned files list is now a proper table with File, Ads, Opts, and Warns columns. Click any column header to sort. Numeric columns sort numerically.
 - **Threshold labels unified** — sensitivity labels are now identical across all three tabs. The old `rm≥N` annotations and TV/Movies recommendations are gone.
 - **Updater improved** — the Check for Updates error dialog now distinguishes between a network failure and a 404 (no releases published yet), with a cleaner message for each.
-
-### v0.7.0 — Subtitle Cleaning Options
-- **Global Cleaning Options** — a new Settings dialog (⚙ Settings in the toolbar) provides content cleaning options that apply across Single File, Batch, and Video Scan. Options include removing music cues, SDH annotations, speaker labels, formatting tags, bracket content, case normalization, and duplicate cue merging. All options are off by default.
-- **SDH accessibility warning** — the SDH annotation removal option carries a visible warning in Settings, as removing sound descriptions reduces accessibility for deaf and hard of hearing viewers. It is never a default.
-- **CLEAN OPT indicators** — blocks that will be removed by cleaning options appear in blue throughout the interface: `✕ OPT` in the Single File block list, `CLEAN OPT` with a blue border in Batch and Video Scan reports, and blue file/track labels in the left panels.
-- **Opts count in status bar** — the bottom bar now shows ads, warnings, and opts counts separately so you always know what will be touched before saving.
-- **Track title normalization** — during any remux operation (MKV or MP4), embedded subtitle track titles are automatically normalized to the clean language name. "English - Encoded by Jackass" becomes "English". No option, always applied.
-- **Global Settings dialog** — mkvmerge path has moved from the Video Scan tab into Settings > Paths. The Video Scan tab no longer has its own Settings button.
-- **Cleaning actions in reports** — after a clean & save, the FILE REPORT in Single File and the detail pane in Batch show a summary of what cleaning options removed or modified, separate from the ad detection report.
-
-### v0.6.0 — Interface Overhaul
-- **Single File tab** — the former Review and Report tabs have been merged into one tab renamed Single File. The full file report now appears in a pane below the block detail, eliminating the need to switch tabs to see why a block was flagged.
-- **Sensitivity slider in Single File** — the 1–5 sensitivity slider is now available on the Single File tab, matching Batch and Video Scan. Re-colors the block list instantly without rescanning.
-- **Tab-scoped controls** — Dry run, Remove warnings, and Open Folder now live inside the Single File tab where they belong. They no longer appear when you are on Batch, Video Scan, or Regex Editor.
-- **File queue inside Single File tab** — the file queue, block list, and detail pane are all within the Single File tab. Switching to any other tab gives that tab the full window width with no layout shift.
-- **Show Full Report in Batch** — a Show Full Report button restores the full batch summary after clicking into an individual file's detail report.
-- **Video Scan folder label** — the selected folder path is now displayed in the Video Scan tab after using Add Folder, matching Batch behavior.
-- **Extracted subtitle filename format** — files saved via Extract & Save are now named `[video filename].[language].[ext]` (e.g. `Movie.eng.srt`). SDH tracks are automatically detected and named `Movie.eng.sdh.srt`.
-
-### v0.5.0 — MP4 Remux Update
-- **MP4 and M4V remuxing** — Clean & Remux now works on MP4 and M4V files using ffmpeg, with no additional dependencies beyond what Video Scan already requires. Backup files are created as `.backup.mp4` by default.
-- **Check for Updates** — opt-in update check button in the status bar. Compares the current version against the latest GitHub release tag and opens the releases page in your browser if an update is available. Never runs automatically.
-- **Semantic versioning** — version numbers now follow standard `v0.x.0` format for clear, predictable release tracking.
-- **pysubs2 added to requirements** — explicitly listed as a required dependency.
 
 ---
 
@@ -72,6 +57,9 @@ Subtitle files downloaded from the internet are frequently polluted with ads, di
 
 ## Requirements
 
+**If using the installer or standalone executable:** no additional requirements — just download and run.
+
+**If running from source:**
 - Python 3.10 or newer
 - FFmpeg (optional — only needed for Video Scan and MP4 remux)
 - MKVToolNix (optional — only needed for Clean & Remux on MKV files)
@@ -86,11 +74,13 @@ pip install -r requirements.txt
 
 ## Launching
 
-Navigate to the SubForge folder in your CLI or right-click inside the application folder and select `Open in Terminal`, then type:
+**Installer / standalone executable:** double-click the Windows installer to install SubForge — the GUI opens directly by double-clicking `SubForge.exe`.
+
+**From source:** navigate to the repo folder and run:
 
 ```bash
-# Open the GUI
-python subforge.py --gui
+# Open the GUI (or just double-click if using the executable)
+python subforge.py
 
 # Open the GUI with a file pre-loaded
 python subforge.py movie.en.srt --gui
@@ -402,20 +392,17 @@ Changes take effect immediately when saved through the Regex Editor tab. If edit
 
 SubForge is under active development. Here is what is coming next.
 
-**v0.8.0 — Settings Expansion** *(released)*
-App renamed to SubForge. About tab with creator credit and issue reporting. General tab with default sensitivity and language selector. English and Spanish UI. Column sort on Batch. Full string extraction for future localization.
-
-**v0.9.0 — Packaging & Distribution**
-Standalone executables for Windows, macOS, and Linux via PyInstaller and GitHub Actions. First-run setup wizard. Session memory. HTML report string extraction for full Spanish coverage.
+**v0.10.0 — OCR for Image-Based Subtitles**
+Tesseract integration for scanning PGS and VOBSUB image tracks in Video Scan — the only remaining gap in video subtitle coverage. Linux binary distribution.
 
 **v1.0.0 — Accessibility & Release**
-Light and high contrast themes. Font size options. Keyboard navigation and screen reader compatibility. First translation (Spanish). Full cross-platform test pass.
+Light and high contrast themes. Font size options. Keyboard navigation and screen reader compatibility. Full cross-platform test pass. Native speaker verification of all 14 language packs.
 
 **Future**
-Local AI subtitle generation via Whisper — transcribe audio to subtitles entirely on-device, with SDH mode for deaf and hard of hearing viewers. Subtitle format conversion. Additional language translations.
+Local AI subtitle generation via Whisper — transcribe audio to subtitles entirely on-device, with SDH mode for deaf and hard of hearing viewers. Subtitle format conversion.
 
 The full roadmap is maintained in `ROADMAP.txt` in the repository.
 
 ---
 
-*SubForge v0.8.0 — based on the detection engine from [subcleaner](https://github.com/KBlixt/subcleaner) by KBlixt (MIT licence)*
+*SubForge v0.9.0 — based on the detection engine from [subcleaner](https://github.com/KBlixt/subcleaner) by KBlixt (MIT licence)*

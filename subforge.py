@@ -225,8 +225,8 @@ Examples:
     args = parser.parse_args()
 
     if not args.paths and not args.gui:
-        parser.print_help()
-        return
+        # No arguments — launch GUI (normal double-click behaviour)
+        args.gui = True
 
     if args.gui:
         from gui.settings_dialog import load_language

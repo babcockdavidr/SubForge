@@ -1,5 +1,5 @@
 SubForge — Development Roadmap
-Last updated: v0.8.0 (complete)
+Last updated: v0.9.0 (complete) — next: v0.10.0
 ================================================================================
 
 COMPLETED
@@ -61,30 +61,44 @@ v0.8.0 — Settings Expansion & Polish
   - Translation fallback: missing keys fall back to English, then show a
     visible placeholder directing user to Report an Issue
 
+v0.9.0 — Packaging & Distribution
+  - Full string extraction for HTML reports in Batch and Video Scan;
+    14 language packs added (EN, ES, NL, HE, ID, PT, SV, FR, AR, ZH, HI, RU, TR, PL)
+  - Session memory: last Batch folder, last Video Scan folder, and window
+    size/position saved to settings.json and restored on next launch
+  - First-run setup wizard: fires once on first launch, detects FFmpeg and
+    MKVToolNix, shows green/red status per tool with download links
+  - core/paths.py: centralised path resolution that works correctly both
+    from source and inside a PyInstaller bundle
+  - PyInstaller packaging: subforge.spec bundles the app into a standalone
+    executable for Windows (macOS and Linux binaries deferred post-1.0)
+  - Windows installer: Inno Setup script (installer/subforge_installer.iss)
+    installs to Program Files, creates Start Menu shortcut, optional file
+    associations for .srt/.ass/.vtt, includes uninstaller
+  - GitHub Actions workflow: .github/workflows/build.yml auto-builds the Windows
+    installer and attaches it to the GitHub release on tag push
+    (macOS and Linux jobs written but disabled — pending hardware testing)
+  - Double-click behaviour: launching with no arguments now opens the GUI
+    instead of printing CLI help
+
 PLANNED
 --------------------------------------------------------------------------------
-(v0.8.0 complete — see COMPLETED)
 
-v0.9.0 — Packaging & Distribution
-  - HTML report string extraction — Batch and Video Scan HTML report templates
-    moved into strings.py (deferred from 0.8.0); Spanish translations added there too
-  - PyInstaller: Windows .exe and macOS .app
-  - Linux AppImage
-  - GitHub Actions workflow — auto-build and attach executables on new tag
-    (one source, all platforms built automatically — solves multi-exe
-    update problem since Check for Updates already just links to releases)
-  - Optional Windows installer (Inno Setup) — Program Files, Start Menu,
-    file associations for .srt/.ass/.vtt
-  - First-run setup wizard — detects FFmpeg and MKVToolNix on PATH,
-    shows status, offers download links. Replaces current warning banners.
-  - Language restart — after changing language in Settings, a "Restart now" button
-    appears that calls os.execv to relaunch the process instantly with the new language
-    applied across all widgets without manual restart
-    (stretch goal: suppress QThreadStorage warnings on Windows during restart)
-  - Session memory — last Batch folder, last Video Scan folder,
-    window size/position persisted across restarts
-  - Drag video onto Single File tab — detect subtitle streams, offer to
-    extract and load directly
+v0.10.0 — OCR for Image-Based Subtitles
+  - Windows installer appears behind other windows on launch — investigate
+    Inno Setup foreground focus fix (SetupMutex and WindowVisible both tried,
+    neither worked; may require a post-install launcher workaround)
+  - Tesseract integration for PGS/VOBSUB track scanning in Video Scan
+      - PGS frames extracted via ffmpeg to PNG, OCR'd via pytesseract
+      - Detection engine runs on OCR output — same pipeline as text tracks
+      - Cleaned result saveable as sidecar .srt or remuxed as text track
+        replacing the original image track
+      - Image tracks currently listed as ◻ IMAGE with no checkbox — this
+        closes the only remaining gap in Video Scan
+  - First-run wizard (0.9.0) surfaces Tesseract as an optional install
+    alongside FFmpeg and MKVToolNix
+  - pytesseract added to requirements.txt (optional dependency)
+  - Tesseract binary path configurable in Settings > Paths
 
 v1.0.0 — Accessibility, Polish & Release
   - Light theme and high contrast theme (toggle in Settings)
@@ -103,10 +117,18 @@ v1.0.0 — Accessibility, Polish & Release
 
 
 POST-1.0 — FUTURE FEATURES
+
+  MACOS AND LINUX BINARIES
+  - Dropped from v0.9.0 scope — Windows installer alone was complex enough
+    to validate. Source code remains cross-platform.
+  - macOS: requires physical hardware to test, code signing complexity
+  - Linux: can be tested via VM — candidate for a minor post-1.0 release
+  - GitHub Actions workflow already has macOS/Linux jobs written and ready;
+    just needs testing and re-enabling when the time comes
 --------------------------------------------------------------------------------
 These are real planned features, not wishlist items. Priority order TBD.
 
-  AI-ASSISTED SUBTITLE GENERATION (v1.x or v2.0)
+  AI-ASSISTED SUBTITLE GENERATION (v1.x — first major post-1.0 feature)
   - Whisper AI integration for local, offline subtitle generation
       - Whisper runs entirely on-device — no cloud, no API keys,
         consistent with SubForge's fully local philosophy
@@ -128,11 +150,6 @@ These are real planned features, not wishlist items. Priority order TBD.
 
   ADDITIONAL TRANSLATIONS
   - Community contribution system via GitHub for additional languages beyond French/Dutch
-
-  OCR FOR IMAGE-BASED SUBTITLES
-  - PGS/VOBSUB scan support via Tesseract
-  - Complex dependency but would close the only remaining gap in
-    Video Scan (image tracks currently listed but unscannable)
 
   ANDROID
   - BeeWare/Briefcase port
