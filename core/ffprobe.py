@@ -19,6 +19,13 @@ from typing import Any, List, Optional, Tuple
 from .subtitle import load_subtitle, SUPPORTED_EXTENSIONS
 from .cleaner import analyze
 
+# On Windows, suppress the console window that pops up for each subprocess call.
+# CREATE_NO_WINDOW = 0x08000000 — only defined on Windows, so guard with sys.
+import sys as _sys
+_SUBPROCESS_FLAGS: dict = (
+    {"creationflags": 0x08000000} if _sys.platform == "win32" else {}
+)
+
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -202,7 +209,7 @@ def probe_video(path: Path) -> Tuple[List[SubtitleTrack], str]:
     ]
 
     try:
-        proc = subprocess.run(cmd, capture_output=True, timeout=30)
+        proc = subprocess.run(cmd, capture_output=True, timeout=30, **_SUBPROCESS_FLAGS)
     except subprocess.TimeoutExpired:
         return [], "ffprobe timed out"
     except Exception as e:
@@ -287,7 +294,7 @@ def extract_and_scan_track(
         ]
 
         try:
-            proc = subprocess.run(cmd, capture_output=True, timeout=60)
+            proc = subprocess.run(cmd, capture_output=True, timeout=60, **_SUBPROCESS_FLAGS)
         except subprocess.TimeoutExpired:
             track.scan_error = "ffmpeg extraction timed out"
             return

@@ -33,7 +33,7 @@ from .subtitle import ParsedSubtitle, SubBlock
 # Regex profile loader
 # ---------------------------------------------------------------------------
 
-_PROFILES_DIR = Path(__file__).parent.parent / "regex_profiles" / "default"
+from .paths import list_profile_dirs as _list_profile_dirs
 
 _purge_regex:   Dict[str, List[Tuple[str, re.Pattern]]] = {}
 _warning_regex: Dict[str, List[Tuple[str, re.Pattern]]] = {}
@@ -48,13 +48,23 @@ def _compile(value: str) -> re.Pattern:
 
 
 def _load_profiles() -> None:
-    if not _PROFILES_DIR.exists():
+    profile_dirs = _list_profile_dirs()
+    if not profile_dirs:
         return
+
+    # Collect all unique .conf files across all profile dirs
+    seen: set = set()
+    all_confs: list = []
+    for d in profile_dirs:
+        for conf in sorted(d.iterdir()):
+            if conf.is_file() and conf.suffix == ".conf" and conf.name not in seen:
+                seen.add(conf.name)
+                all_confs.append(conf)
 
     # Pass 1: global profiles first (no language_codes, or has excluded_language_codes)
     # Pass 2: language-specific profiles
     for pass_num in (1, 2):
-        for conf in sorted(_PROFILES_DIR.iterdir()):
+        for conf in all_confs:
             if not conf.is_file() or conf.suffix != ".conf":
                 continue
             parser = configparser.ConfigParser()

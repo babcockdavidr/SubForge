@@ -33,7 +33,12 @@ from .cleaner import clean as cleaner_clean
 # Settings persistence  (stores mkvmerge path if not on system PATH)
 # ---------------------------------------------------------------------------
 
-_SETTINGS_FILE = Path(__file__).parent.parent / "settings.json"
+from .paths import SETTINGS_FILE as _SETTINGS_FILE
+
+import sys as _sys
+_SUBPROCESS_FLAGS: dict = (
+    {"creationflags": 0x08000000} if _sys.platform == "win32" else {}
+)
 
 
 def _load_settings() -> dict:
@@ -194,7 +199,7 @@ def extract_and_clean_track(
     ]
 
     try:
-        proc = subprocess.run(cmd, capture_output=True, timeout=120)
+        proc = subprocess.run(cmd, capture_output=True, timeout=120, **_SUBPROCESS_FLAGS)
     except subprocess.TimeoutExpired:
         return None, "ffmpeg extraction timed out"
     except Exception as e:
@@ -334,7 +339,7 @@ def remux_with_cleaned_tracks(
 
         try:
             proc = subprocess.run(
-                cmd, capture_output=True, timeout=600
+                cmd, capture_output=True, timeout=600, **_SUBPROCESS_FLAGS
             )
         except subprocess.TimeoutExpired:
             return RemuxResult(success=False, error="mkvmerge timed out (10 min limit)")
@@ -519,7 +524,7 @@ def remux_mp4_with_ffmpeg(
             progress_cb(f"Running ffmpeg on {video_path.name}…")
 
         try:
-            proc = subprocess.run(cmd, capture_output=True, timeout=600)
+            proc = subprocess.run(cmd, capture_output=True, timeout=600, **_SUBPROCESS_FLAGS)
         except subprocess.TimeoutExpired:
             return RemuxResult(success=False, error="ffmpeg timed out (10 min limit)")
         except Exception as e:
